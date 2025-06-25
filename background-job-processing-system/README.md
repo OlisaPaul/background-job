@@ -1,0 +1,170 @@
+# Django Background Job Processing System with Celery
+
+A production-ready background job processing system built with Django, Celery, and Django REST Framework. This project provides a web interface and RESTful API for managing, monitoring, and executing various background jobs asynchronously.
+
+## Features
+
+- **Web Interface**: Django Admin for job management
+- **RESTful API**: Create, list, retry, and monitor jobs via API
+- **Multiple Job Types**: Email sending, image processing, report generation, data fetching, and more
+- **Real-time Monitoring**: Live job statistics and progress tracking
+- **Retry Logic**: Automatic retry with exponential backoff for failed jobs
+- **Priority Queues**: Job prioritization system
+- **Database Persistence**: SQLite by default (easy to switch to PostgreSQL)
+- **Multi-threaded Processing**: Celery worker for concurrent job execution
+- **Extensible**: Easily add new job types and logic
+
+## Available Job Types
+
+- `send_email` - Send email notifications
+- `process_image` - Process images with various operations
+- `generate_report` - Generate various types of reports
+- `backup_database` - Backup databases with different options
+- `fetch_data` - Fetch data from external APIs
+- `batch_process` - Process large datasets in batches
+- `send_notification` - Send notifications to multiple recipients
+- `cleanup_files` - Clean up old files from directories
+
+## Project Structure
+
+```
+background-job-processing-system/
+├── job_system/                # Django project settings and celery config
+│   ├── __init__.py
+│   ├── celery.py              # Celery app instance
+│   ├── settings.py            # Django settings
+│   ├── urls.py                # URL routing
+│   └── wsgi.py
+├── jobs/                      # App for job management
+│   ├── admin.py
+│   ├── apps.py
+│   ├── models.py              # Job model
+│   ├── serializers.py         # DRF serializers
+│   ├── tasks.py               # Celery tasks
+│   ├── urls.py                # API routes
+│   └── views.py               # API views
+├── manage.py
+├── requirements.txt           # Python dependencies
+└── db.sqlite3                 # SQLite database (default)
+```
+
+## Quick Start
+
+1. **Clone the repository and navigate to the project directory**
+2. **Create and activate a virtual environment**
+   ```powershell
+   python -m venv .venv
+   .venv\Scripts\activate
+   ```
+3. **Install dependencies**
+   ```powershell
+   pip install -r requirements.txt
+   ```
+4. **Apply migrations**
+   ```powershell
+   python manage.py migrate
+   ```
+5. **Create a superuser**
+   ```powershell
+   python manage.py createsuperuser
+   ```
+6. **Start the Django development server**
+   ```powershell
+   python manage.py runserver
+   ```
+7. **Start a Redis server** (required for Celery broker)
+   - Download and run Redis from https://redis.io/ if not already running.
+8. **Start the Celery worker**
+   ```powershell
+   .venv\Scripts\celery -A job_system worker -l info
+   ```
+9. **Copy the example environment file and update with your secrets**
+   ```powershell
+   copy .env.example .env
+   # Then edit .env with your own credentials
+   ```
+
+## API Endpoints
+
+- `POST /api/jobs/` - Create a new job
+- `GET /api/jobs/` - List jobs (with optional filtering)
+- `GET /api/jobs/{id}/` - Get specific job details
+- `DELETE /api/jobs/{id}/` - Delete a job
+- `POST /api/jobs/{id}/retry/` - Retry a failed job
+- `GET /api/jobs/stats/` - Get job statistics
+- `GET /api/jobs/types/` - Get available job types
+
+## Example Usage
+
+### Creating a Job via API
+
+```python
+import requests
+
+job_data = {
+    "job_type": "send_email",
+    "parameters": {
+        "recipient": "user@example.com",
+        "subject": "Welcome!",
+        "body": "Welcome to our service!"
+    },
+    "priority": 5,
+    "max_retries": 3
+}
+
+response = requests.post("http://localhost:8000/api/jobs/", json=job_data)
+print(response.json())
+```
+
+### Creating a Job via Django Admin
+
+1. Go to `http://localhost:8000/admin/`
+2. Log in with your superuser credentials
+3. Add or manage jobs from the Jobs section
+
+## Configuration
+
+- **Celery Broker**: Uses Redis (`redis://localhost:6379/0`)
+- **Result Backend**: Uses Django DB (`django-db`)
+- **Database**: SQLite by default (change in `settings.py` for PostgreSQL)
+- **Job Types**: Defined in `jobs/models.py` as `JOB_TYPE_CHOICES`
+- **API**: Powered by Django REST Framework
+
+## Environment Variables
+
+All sensitive settings are loaded from a `.env` file. See `.env.example` for required variables:
+
+- `DJANGO_SECRET_KEY` - Django secret key
+- `DJANGO_DEBUG` - Set to `True` or `False`
+- `DJANGO_ALLOWED_HOSTS` - Comma-separated list of allowed hosts
+- `EMAIL_HOST` - SMTP server
+- `EMAIL_PORT` - SMTP port
+- `EMAIL_HOST_USER` - SMTP username
+- `EMAIL_HOST_PASSWORD` - SMTP password
+- `EMAIL_USE_TLS` - `True` or `False`
+- `AWS_ACCESS_KEY_ID` - Your AWS access key
+- `AWS_SECRET_ACCESS_KEY` - Your AWS secret key
+- `AWS_STORAGE_BUCKET_NAME` - Your S3 bucket name
+- `AWS_REGION` - Your S3 region (default: us-east-1)
+
+**Never commit your real `.env` file to version control!**
+
+## Testing
+
+- Use Django Admin or API endpoints to create and monitor jobs
+- Start both Django server and Celery worker for full functionality
+- Check job status and results via API or admin
+
+## Dependencies
+
+- Django
+- Celery
+- django-celery-results
+- django-celery-beat
+- djangorestframework
+- redis (for broker)
+- psycopg2-binary (if using PostgreSQL)
+
+## License
+
+This project is provided as an educational example for background job processing in Django.

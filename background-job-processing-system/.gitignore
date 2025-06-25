@@ -1,0 +1,69 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+
+# Django
+*.log
+*.pot
+*.pyc
+*.sqlite3
+db.sqlite3
+media/
+staticfiles/
+
+# Environments
+.env
+.venv/
+venv/
+ENV/
+
+# VSCode
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# AWS
+*.pem
+
+# Misc
+*.bak
+*.swp
+*.swo
+
+# Coverage
+htmlcov/
+.coverage
+.tox/
+.coverage.*
+.cache
+
+# Pip
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Test
+junit*.xml
+
+# mypy
+.mypy_cache/
+.dmypy.json
+
+# Pytest
+.pytest_cache/
+
+# S3
+*.boto
+
+# Others
+*.egg-info/
+dist/
+build/
