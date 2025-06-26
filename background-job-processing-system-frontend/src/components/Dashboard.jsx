@@ -18,10 +18,14 @@ function getWebSocketUrl() {
 
 function Dashboard() {
   const [jobs, setJobs] = useState([]);
+  const [count, setCount] = useState(0);
+  const [page, setPage] = useState(1);
+  const [next, setNext] = useState(null);
+  const [previous, setPrevious] = useState(null);
   const wsRef = useRef(null);
 
   useEffect(() => {
-    fetchJobs();
+    fetchJobs(page);
     // WebSocket connection
     let wsUrl = getWebSocketUrl();
     wsRef.current = new window.WebSocket(wsUrl);
@@ -47,13 +51,16 @@ function Dashboard() {
     };
     return () => wsRef.current && wsRef.current.close();
     // eslint-disable-next-line
-  }, []);
+  }, [page]);
 
-  function fetchJobs() {
-    fetch(`${API_BASE}/jobs/`)
+  function fetchJobs(pageNum = 1) {
+    fetch(`${API_BASE}/jobs/?page=${pageNum}`)
       .then((res) => res.json())
       .then((data) => {
-        setJobs(data.results || data || []);
+        setJobs(data.results || []);
+        setCount(data.count || 0);
+        setNext(data.next);
+        setPrevious(data.previous);
       });
   }
 
@@ -72,6 +79,21 @@ function Dashboard() {
     }
   }
 
+  // Retry job handler
+  function handleRetry(id) {
+    fetch(`${API_BASE}/jobs/${id}/retry/`, { method: "POST" })
+      .then((res) => {
+        if (res.ok) {
+          fetchJobs(page); // Refresh jobs for current page
+        } else {
+          res.json().then((data) => {
+            alert(data.error || "Failed to retry job.");
+          });
+        }
+      })
+      .catch(() => alert("Failed to retry job."));
+  }
+
   // Convert job_type to human-friendly string
   function humanizeJobType(type) {
     switch (type) {
@@ -81,9 +103,7 @@ function Dashboard() {
         return "File Upload";
       default:
         // Convert snake_case to Title Case
-        return type
-          .replace(/_/g, " ")
-          .replace(/\b\w/g, (c) => c.toUpperCase());
+        return type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
     }
   }
 
@@ -112,9 +132,16 @@ function Dashboard() {
                 else if (job.status === "running") rowClass += " table-warning";
                 else if (job.status === "pending") rowClass += " table-primary";
 
+                // Calculate SNO based on page and page size
+                const pageSize =
+                  jobs.length > 0
+                    ? Math.ceil(count / Math.ceil(count / jobs.length))
+                    : 10;
+                const sno = (page - 1) * pageSize + idx + 1;
+
                 return (
                   <tr key={job.id} className={rowClass}>
-                    <td>{idx + 1}</td>
+                    <td>{sno}</td>
                     <td>{humanizeJobType(job.job_type)}</td>
                     <td>{job.status}</td>
                     <td>
@@ -132,7 +159,7 @@ function Dashboard() {
                       <button
                         className="btn btn-secondary btn-sm"
                         disabled={job.status !== "failed"}
-                        // onClick={() => handleRetry(job.id)}
+                        onClick={() => handleRetry(job.id)}
                       >
                         Retry
                       </button>
@@ -142,6 +169,26 @@ function Dashboard() {
               })}
             </tbody>
           </Table>
+          <div className="d-flex justify-content-between align-items-center mt-3">
+            <button
+              className="btn btn-outline-primary"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={!previous}
+            >
+              Previous
+            </button>
+            <span>
+              Page {page} of{" "}
+              {jobs.length > 0 ? Math.ceil(count / jobs.length) : 1}
+            </span>
+            <button
+              className="btn btn-outline-primary"
+              onClick={() => setPage((p) => p + 1)}
+              disabled={!next}
+            >
+              Next
+            </button>
+          </div>
         </Card.Body>
       </Card>
     </Container>
