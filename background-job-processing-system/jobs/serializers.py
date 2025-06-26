@@ -16,7 +16,6 @@ class JobSerializer(serializers.ModelSerializer):
 
 class FileUploadJobSerializer(serializers.Serializer):
     file = serializers.FileField()
-    file_name = serializers.CharField(max_length=255)
     priority = serializers.IntegerField(default=5)
     max_retries = serializers.IntegerField(default=3)
 
@@ -28,7 +27,7 @@ class FileUploadJobSerializer(serializers.Serializer):
 
     def create(self, validated_data):
         file = validated_data['file']
-        file_name = validated_data['file_name']
+        file_name = file.name
         # Save file temporarily to disk (media/uploads/)
         temp_dir = 'media/uploads/'
         os.makedirs(temp_dir, exist_ok=True)

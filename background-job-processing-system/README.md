@@ -130,7 +130,7 @@ import requests
 
 with open('myfile.txt', 'rb') as f:
     files = {'file': f}
-    data = {'file_name': 'myfile.txt'}
+    data = {}  # file_name is not required
     response = requests.post('http://localhost:8000/api/jobs/upload-file/', files=files, data=data)
     print(response.json())
 ```
@@ -150,9 +150,9 @@ with open('myfile.txt', 'rb') as f:
   - Use the DRF web UI or a tool like Postman.
   - Fields:
     - `file`: The file to upload (max 10 MB)
-    - `file_name`: The name to use in S3
     - `priority`: (optional) Job priority
     - `max_retries`: (optional) Max retries
+  - The file name is automatically taken from the uploaded file.
 - The file is saved temporarily to disk, then uploaded to S3 in the background by Celery. The file is not stored in the database.
 - The job result will include a `file_url` with a direct link to the uploaded file.
 
