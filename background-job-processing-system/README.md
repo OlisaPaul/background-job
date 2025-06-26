@@ -103,10 +103,13 @@ background-job-processing-system/
 ## Troubleshooting
 
 ### Redis BZPOPMIN Error
+
 If you see an error like:
+
 ```
 redis.exceptions.ResponseError: unknown command 'BZPOPMIN'
 ```
+
 Your Redis server is too old. Upgrade to Redis 5.0 or higher (see above for Windows instructions).
 
 ## API Endpoints
