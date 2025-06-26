@@ -34,9 +34,19 @@ def execute_job_task(self, job_id):
                 aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
                 region_name=os.getenv('AWS_REGION')
             )
-            file_content = base64.b64decode(params['file_content'])
-            s3.put_object(Bucket=os.getenv('AWS_STORAGE_BUCKET_NAME'), Key=params['file_name'], Body=file_content)
-            result = {'message': f"File {params['file_name']} uploaded to S3."}
+            temp_path = params['temp_path']
+            file_name = params['file_name']
+            bucket = os.getenv('AWS_STORAGE_BUCKET_NAME')
+            with open(temp_path, 'rb') as f:
+                s3.put_object(Bucket=bucket, Key=file_name, Body=f)
+            region = os.getenv('AWS_REGION', 'us-east-1')
+            file_url = f"https://{bucket}.s3.{region}.amazonaws.com/{file_name}"
+            result = {
+                'message': f"File {file_name} uploaded to S3.",
+                'file_url': file_url
+            }
+            # Remove the temp file after upload
+            os.remove(temp_path)
         else:
             # Simulate other job processing
             time.sleep(2)

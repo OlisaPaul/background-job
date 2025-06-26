@@ -2,13 +2,17 @@ from django.shortcuts import render
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser, FormParser
 from .models import Job, JOB_TYPE_CHOICES
-from .serializers import JobSerializer
+from .serializers import JobSerializer, FileUploadJobSerializer
 from .tasks import execute_job_task
 
 class JobViewSet(viewsets.ModelViewSet):
     queryset = Job.objects.all().order_by('-created_at')
-    serializer_class = JobSerializer
+    def get_serializer_class(self):
+        if self.action == 'upload_file':
+            return FileUploadJobSerializer
+        return JobSerializer
 
     def perform_create(self, serializer):
         job = serializer.save()
@@ -38,5 +42,14 @@ class JobViewSet(viewsets.ModelViewSet):
             'completed': Job.objects.filter(status='completed').count(),
             'failed': Job.objects.filter(status='failed').count(),
         })
+
+    @action(detail=False, methods=['post'], parser_classes=[MultiPartParser, FormParser], url_path='upload-file')
+    def upload_file(self, request):
+        serializer = FileUploadJobSerializer(data=request.data)
+        if serializer.is_valid():
+            job = serializer.save()
+            execute_job_task.delay(job.id)
+            return Response(JobSerializer(job).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # Create your views here.
