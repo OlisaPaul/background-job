@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import "./FormStyles.css"; // Import the shared CSS file
 
 const API_BASE = "http://localhost:8000/api";
 
@@ -23,7 +24,9 @@ function FileUploadForm() {
     formData.append("file", file);
     formData.append("schedule_type", scheduleType);
     if (scheduleType === "scheduled") {
-      formData.append("scheduled_time", scheduledTime);
+      // Convert local datetime to UTC ISO string
+      const local = new Date(scheduledTime);
+      formData.append("scheduled_time", local.toISOString());
     }
     try {
       const res = await fetch(`${API_BASE}/jobs/upload-file/`, {
@@ -40,42 +43,54 @@ function FileUploadForm() {
   };
 
   return (
-    <div style={{ maxWidth: 500, margin: "0 auto" }}>
+    <div className="form-container">
       <h2>Upload File Job</h2>
-      <form onSubmit={handleSubmit}>
-        <div>
+      <form onSubmit={handleSubmit} className="styled-form">
+        <div className="form-group">
           <label>File:</label>
           <br />
           <input
             type="file"
             onChange={(e) => setFile(e.target.files[0])}
             required
+            className="form-control"
           />
         </div>
-        <div>
+        <div className="form-group">
           <label>Schedule:</label>
           <br />
           <select
             value={scheduleType}
             onChange={(e) => setScheduleType(e.target.value)}
+            className="form-control"
           >
             <option value="immediate">Immediate</option>
             <option value="scheduled">Scheduled</option>
           </select>
         </div>
         {scheduleType === "scheduled" && (
-          <div>
-            <label>Scheduled Time (UTC):</label>
+          <div className="form-group">
+            <label>Scheduled Time (your local time):</label>
             <br />
             <input
               type="datetime-local"
               value={scheduledTime}
               onChange={(e) => setScheduledTime(e.target.value)}
               required
+              className="form-control"
             />
+            <div style={{ fontSize: "0.9em", color: "#555" }}>
+              This will be converted to UTC when submitted. Your current
+              timezone: {Intl.DateTimeFormat().resolvedOptions().timeZone}
+            </div>
           </div>
         )}
-        <button type="submit" disabled={loading} style={{ marginTop: 16 }}>
+        <button
+          type="submit"
+          disabled={loading}
+          style={{ marginTop: 16 }}
+          className="btn btn-primary w-100"
+        >
           {loading ? "Submitting..." : "Upload File"}
         </button>
         {error && <div style={{ color: "red", marginTop: 8 }}>{error}</div>}
