@@ -131,10 +131,13 @@ Your Redis server is too old. Upgrade to Redis 5.0 or higher (see above for Wind
 - If an invalid or out-of-range page is requested, an empty result or error is returned.
 
 Example:
+
 ```http
 GET /api/jobs/?page=1
 ```
+
 Response:
+
 ```json
 {
   "count": 42,
