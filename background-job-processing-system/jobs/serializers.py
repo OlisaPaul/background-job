@@ -4,6 +4,14 @@ import os
 
 class JobSerializer(serializers.ModelSerializer):
     file_url = serializers.SerializerMethodField()
+    schedule_type = serializers.ChoiceField(choices=[
+        ('immediate', 'Immediate'),
+        ('hourly', 'Every Hour'),
+        ('daily', 'Every Day'),
+        ('monthly', 'Every Month'),
+        ('yearly', 'Every Year'),
+    ], default='immediate', required=False)
+    scheduled_time = serializers.DateTimeField(required=False, allow_null=True)
 
     class Meta:
         model = Job
@@ -18,6 +26,22 @@ class FileUploadJobSerializer(serializers.Serializer):
     file = serializers.FileField()
     priority = serializers.IntegerField(default=5)
     max_retries = serializers.IntegerField(default=3)
+    schedule_type = serializers.ChoiceField(choices=[
+        ('immediate', 'Immediate'),
+        ('one-off', 'One-off Scheduled'),
+        ('hourly', 'Every Hour'),
+        ('daily', 'Every Day'),
+        ('monthly', 'Every Month'),
+        ('yearly', 'Every Year'),
+    ], default='immediate', required=False)
+    scheduled_time = serializers.DateTimeField(required=False, allow_null=True)
+
+    def validate(self, data):
+        # Disallow recurring file upload jobs, but allow immediate and one-off scheduled
+        recurring_types = ['hourly', 'daily', 'monthly', 'yearly']
+        if data.get('schedule_type', 'immediate') in recurring_types:
+            raise serializers.ValidationError('Recurring file upload jobs are not supported. Please use immediate or one-off scheduled upload.')
+        return data
 
     def validate_file(self, value):
         max_size = 10 * 1024 * 1024  # 10 MB
@@ -42,6 +66,8 @@ class FileUploadJobSerializer(serializers.Serializer):
                 'temp_path': temp_path
             },
             priority=validated_data.get('priority', 5),
-            max_retries=validated_data.get('max_retries', 3)
+            max_retries=validated_data.get('max_retries', 3),
+            schedule_type=validated_data.get('schedule_type', 'immediate'),
+            scheduled_time=validated_data.get('scheduled_time', None)
         )
         return job

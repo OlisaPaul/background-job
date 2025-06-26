@@ -7,11 +7,11 @@ import boto3
 from botocore.exceptions import BotoCoreError, ClientError
 import base64
 import os
+from django_celery_beat.models import PeriodicTask
 
 @shared_task(bind=True, max_retries=3)
 def execute_job_task(self, job_id):
     job = Job.objects.get(id=job_id)
-    print(f"Executing job {job_id} of type {job.job_type} with parameters {job.parameters}")
     job.status = 'running'
     job.save()
     try:
@@ -37,6 +37,11 @@ def execute_job_task(self, job_id):
             temp_path = params['temp_path']
             file_name = params['file_name']
             bucket = os.getenv('AWS_STORAGE_BUCKET_NAME')
+            if not os.path.exists(temp_path):
+                job.status = 'failed'
+                job.result = {'error': f"File {file_name} not found at {temp_path}. It may have been deleted before the scheduled job ran."}
+                job.save()
+                return
             with open(temp_path, 'rb') as f:
                 s3.put_object(Bucket=bucket, Key=file_name, Body=f)
             region = os.getenv('AWS_REGION', 'us-east-1')
@@ -59,3 +64,12 @@ def execute_job_task(self, job_id):
         job.save()
         raise self.retry(exc=exc, countdown=2 ** job.retries)
     job.save()
+
+@shared_task
+def enable_periodic_task(periodic_task_id):
+    try:
+        pt = PeriodicTask.objects.get(id=periodic_task_id)
+        pt.enabled = True
+        pt.save()
+    except PeriodicTask.DoesNotExist:
+        pass

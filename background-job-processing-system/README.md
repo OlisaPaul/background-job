@@ -156,6 +156,41 @@ with open('myfile.txt', 'rb') as f:
 - The file is saved temporarily to disk, then uploaded to S3 in the background by Celery. The file is not stored in the database.
 - The job result will include a `file_url` with a direct link to the uploaded file.
 
+## Scheduling Jobs
+
+- To schedule a job, include the `schedule_type` field in your job data.
+- Options for `schedule_type`: `immediate`, `hourly`, `daily`, `monthly`, `yearly`
+- Default is `immediate` (run as soon as possible).
+- `scheduled_time` is reserved for future use and should be left unset.
+
+**Example for scheduling a daily file upload:**
+
+```python
+with open('myfile.txt', 'rb') as f:
+    files = {'file': f}
+    data = {'schedule_type': 'daily'}
+    response = requests.post('http://localhost:8000/api/jobs/upload-file/', files=files, data=data)
+    print(response.json())
+```
+
+**Example for scheduling a daily email:**
+
+```python
+job_data = {
+    "job_type": "send_email",
+    "parameters": {
+        "recipient": "user@example.com",
+        "subject": "Daily Report",
+        "body": "Here is your daily report."
+    },
+    "priority": 5,
+    "max_retries": 3,
+    "schedule_type": "daily"
+}
+response = requests.post("http://localhost:8000/api/jobs/", json=job_data)
+print(response.json())
+```
+
 ## Environment Variables
 
 All sensitive settings are loaded from a `.env` file. See `.env.example` for required variables:

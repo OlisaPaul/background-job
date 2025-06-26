@@ -30,7 +30,7 @@ Thumbs.db
 # Celery
 celerybeat-schedule
 celerybeat.pid
-
+celerybeat-schedule*
 # AWS
 *.pem
 

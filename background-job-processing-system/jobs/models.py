@@ -12,6 +12,14 @@ JOB_TYPE_CHOICES = [
     ('upload_file', 'Upload File to S3'),
 ]
 
+SCHEDULE_TYPE_CHOICES = [
+    ('immediate', 'Immediate'),
+    ('hourly', 'Every Hour'),
+    ('daily', 'Every Day'),
+    ('monthly', 'Every Month'),
+    ('yearly', 'Every Year'),
+]
+
 class Job(models.Model):
     job_type = models.CharField(max_length=50, choices=JOB_TYPE_CHOICES)
     parameters = models.JSONField()
@@ -22,6 +30,8 @@ class Job(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     result = models.JSONField(null=True, blank=True)
+    schedule_type = models.CharField(max_length=20, choices=SCHEDULE_TYPE_CHOICES, default='immediate')
+    scheduled_time = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.job_type} (Priority: {self.priority})"
