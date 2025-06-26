@@ -20,6 +20,12 @@ class FileUploadJobSerializer(serializers.Serializer):
     priority = serializers.IntegerField(default=5)
     max_retries = serializers.IntegerField(default=3)
 
+    def validate_file(self, value):
+        max_size = 10 * 1024 * 1024  # 10 MB
+        if value.size > max_size:
+            raise serializers.ValidationError('File size must not exceed 10 MB.')
+        return value
+
     def create(self, validated_data):
         file = validated_data['file']
         file_name = validated_data['file_name']
