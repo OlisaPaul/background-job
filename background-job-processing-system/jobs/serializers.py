@@ -6,17 +6,27 @@ class JobSerializer(serializers.ModelSerializer):
     file_url = serializers.SerializerMethodField()
     schedule_type = serializers.ChoiceField(choices=[
         ('immediate', 'Immediate'),
-        ('hourly', 'Every Hour'),
-        ('daily', 'Every Day'),
-        ('monthly', 'Every Month'),
-        ('yearly', 'Every Year'),
-        ('yearly', 'sche'),
+        ('scheduled', 'Scheduled')
     ], default='immediate', required=False)
     scheduled_time = serializers.DateTimeField(required=False, allow_null=True)
 
     class Meta:
         model = Job
         fields = '__all__'
+    
+    def validate(self, data):
+        schedule_type = data.get('schedule_type', 'immediate')
+        scheduled_time = data.get('scheduled_time', None)
+        if schedule_type == 'immediate' and scheduled_time:
+            raise serializers.ValidationError('scheduled_time must not be set for immediate jobs.')
+        if schedule_type == 'scheduled':
+            if not scheduled_time:
+                raise serializers.ValidationError('scheduled_time is required for scheduled jobs.')
+            from django.utils import timezone
+            if scheduled_time <= timezone.now():
+                raise serializers.ValidationError('scheduled_time must be in the future.')
+        return data
+
 
     def get_file_url(self, obj):
         if obj.job_type == 'upload_file' and obj.result and isinstance(obj.result, dict):
@@ -29,19 +39,21 @@ class FileUploadJobSerializer(serializers.Serializer):
     max_retries = serializers.IntegerField(default=3)
     schedule_type = serializers.ChoiceField(choices=[
         ('immediate', 'Immediate'),
-        ('one-off', 'One-off Scheduled'),
-        ('hourly', 'Every Hour'),
-        ('daily', 'Every Day'),
-        ('monthly', 'Every Month'),
-        ('yearly', 'Every Year'),
+        ('scheduled', 'Scheduled'),
     ], default='immediate', required=False)
     scheduled_time = serializers.DateTimeField(required=False, allow_null=True)
 
     def validate(self, data):
-        # Disallow recurring file upload jobs, but allow immediate and one-off scheduled
-        recurring_types = ['hourly', 'daily', 'monthly', 'yearly']
-        if data.get('schedule_type', 'immediate') in recurring_types:
-            raise serializers.ValidationError('Recurring file upload jobs are not supported. Please use immediate or one-off scheduled upload.')
+        schedule_type = data.get('schedule_type', 'immediate')
+        scheduled_time = data.get('scheduled_time', None)
+        if schedule_type == 'immediate' and scheduled_time:
+            raise serializers.ValidationError('scheduled_time must not be set for immediate jobs.')
+        if schedule_type == 'scheduled':
+            if not scheduled_time:
+                raise serializers.ValidationError('scheduled_time is required for scheduled jobs.')
+            from django.utils import timezone
+            if scheduled_time <= timezone.now():
+                raise serializers.ValidationError('scheduled_time must be in the future.')
         return data
 
     def validate_file(self, value):

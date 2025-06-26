@@ -14,10 +14,7 @@ JOB_TYPE_CHOICES = [
 
 SCHEDULE_TYPE_CHOICES = [
     ('immediate', 'Immediate'),
-    ('hourly', 'Every Hour'),
-    ('daily', 'Every Day'),
-    ('monthly', 'Every Month'),
-    ('yearly', 'Every Year'),
+    ('scheduled', 'Scheduled'),
 ]
 
 class Job(models.Model):

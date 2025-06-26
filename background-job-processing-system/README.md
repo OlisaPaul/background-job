@@ -212,6 +212,39 @@ All sensitive settings are loaded from a `.env` file. See `.env.example` for req
 - Start both Django server and Celery worker for full functionality
 - Check job status and results via API or admin
 
+## Running Tests
+
+Unit tests are provided for all major job scheduling and file upload features. To run the tests:
+
+```bash
+python manage.py test jobs
+```
+
+The tests cover:
+- Immediate and scheduled job creation (email and file upload)
+- Validation for required and future `scheduled_time`
+- File size validation for uploads
+
+Test file location: `jobs/test_jobs.py`
+
+## Integration Tests
+
+Integration tests are provided to verify the end-to-end behavior of job creation, file uploads, and Celery task triggering. These tests use Django's test client and mock Celery tasks to ensure correct system integration without running real background jobs.
+
+To run all tests (unit and integration):
+
+```bash
+python manage.py test jobs
+```
+
+Integration test file location: `jobs/test_integration.py`
+
+The integration tests cover:
+- Creating jobs via the API and verifying database persistence
+- Immediate job creation triggers Celery (mocked)
+- Immediate file upload creates both the file and the job, and triggers Celery (mocked)
+- Scheduled jobs do not trigger Celery immediately
+
 ## Dependencies
 
 - Django
