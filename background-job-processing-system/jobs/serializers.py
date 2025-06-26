@@ -10,6 +10,7 @@ class JobSerializer(serializers.ModelSerializer):
         ('daily', 'Every Day'),
         ('monthly', 'Every Month'),
         ('yearly', 'Every Year'),
+        ('yearly', 'sche'),
     ], default='immediate', required=False)
     scheduled_time = serializers.DateTimeField(required=False, allow_null=True)
 

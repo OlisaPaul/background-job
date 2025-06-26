@@ -158,38 +158,34 @@ with open('myfile.txt', 'rb') as f:
 
 ## Scheduling Jobs
 
-- To schedule a job, include the `schedule_type` field in your job data.
-- Options for `schedule_type`: `immediate`, `hourly`, `daily`, `monthly`, `yearly`
-- Default is `immediate` (run as soon as possible).
-- `scheduled_time` is reserved for future use and should be left unset.
+Jobs can be scheduled in two ways using the `schedule_type` field:
 
-**Example for scheduling a daily file upload:**
+- `immediate`: The job is executed as soon as it is created. Do not provide `scheduled_time`.
+- `scheduled`: The job is executed at a specific future date and time. You must provide a `scheduled_time` (in ISO 8601 format, e.g., `2025-07-01T12:00:00Z`).
 
-```python
-with open('myfile.txt', 'rb') as f:
-    files = {'file': f}
-    data = {'schedule_type': 'daily'}
-    response = requests.post('http://localhost:8000/api/jobs/upload-file/', files=files, data=data)
-    print(response.json())
-```
+**Example JSON for immediate job:**
 
-**Example for scheduling a daily email:**
-
-```python
-job_data = {
-    "job_type": "send_email",
-    "parameters": {
-        "recipient": "user@example.com",
-        "subject": "Daily Report",
-        "body": "Here is your daily report."
-    },
-    "priority": 5,
-    "max_retries": 3,
-    "schedule_type": "daily"
+```json
+{
+  "job_type": "send_email",
+  "parameters": { ... },
+  "schedule_type": "immediate"
 }
-response = requests.post("http://localhost:8000/api/jobs/", json=job_data)
-print(response.json())
 ```
+
+**Example JSON for scheduled job:**
+
+```json
+{
+  "job_type": "send_email",
+  "parameters": { ... },
+  "schedule_type": "scheduled",
+  "scheduled_time": "2025-07-01T12:00:00Z"
+}
+```
+
+- For file uploads, use the `/api/jobs/upload-file/` endpoint with the same `schedule_type` logic.
+- Recurring jobs (hourly, daily, etc.) are not supported in this version.
 
 ## Environment Variables
 
