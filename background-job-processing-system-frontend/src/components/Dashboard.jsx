@@ -109,14 +109,18 @@ function Dashboard() {
   }
 
   return (
-    <Container className="mt-32" style={{ maxWidth: 1400 }}>
-      <Card className="shadow-sm">
+    <Container
+      fluid
+      className="mt-4"
+      style={{ minHeight: "90vh", maxWidth: "100vw", padding: 0 }}
+    >
+      <Card className="shadow-sm" style={{ border: "none" }}>
         <Card.Body>
           <Card.Title as="h2" className="mb-4 text-center">
             Job Dashboard
           </Card.Title>
-          <div className="row">
-            <div className="col-md-8">
+          <div className="row flex-column flex-md-row">
+            <div className="col-12 col-md-8 pe-md-5 mb-4 mb-md-0">
               <Table striped bordered hover responsive>
                 <thead>
                   <tr>
@@ -197,7 +201,7 @@ function Dashboard() {
                 </button>
               </div>
             </div>
-            <div className="col-md-4 d-flex align-items-center justify-content-center">
+            <div className="col-12 col-md-4 d-flex align-items-center justify-content-center justify-content-md-end ps-md-5">
               <JobStatsChart />
             </div>
           </div>
