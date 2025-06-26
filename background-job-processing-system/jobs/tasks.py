@@ -73,6 +73,7 @@ def execute_job_task(self, job_id):
                 }
             }
         )
+        print(f"WebSocket update sent for job {job.id} with status {job.status}")
     except Exception as exc:
         job.status = 'failed'
         job.retries += 1

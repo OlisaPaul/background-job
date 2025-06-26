@@ -1,29 +1,24 @@
-# Django Background Job Processing System with Celery
+# Django Background Job Processing System with Celery, Channels, and DRF
 
-A production-ready background job processing system built with Django, Celery, and Django REST Framework. This project provides a web interface and RESTful API for managing, monitoring, and executing various background jobs asynchronously.
+A production-ready background job processing system built with Django, Celery, Django REST Framework, and Django Channels. This project provides a web interface and RESTful API for managing, monitoring, and executing various background jobs asynchronously, with real-time job status updates via WebSocket.
 
 ## Features
 
 - **Web Interface**: Django Admin for job management
 - **RESTful API**: Create, list, retry, and monitor jobs via API
-- **Multiple Job Types**: Email sending, image processing, report generation, data fetching, and more
-- **Real-time Monitoring**: Live job statistics and progress tracking
+- **Multiple Job Types**: Email sending, file upload to S3 (with temp file handling)
+- **Real-time Monitoring**: Live job status updates via WebSocket (Django Channels)
 - **Retry Logic**: Automatic retry with exponential backoff for failed jobs
 - **Priority Queues**: Job prioritization system
 - **Database Persistence**: SQLite by default (easy to switch to PostgreSQL)
-- **Multi-threaded Processing**: Celery worker for concurrent job execution
+- **Scheduling**: Immediate and one-off scheduled jobs
 - **Extensible**: Easily add new job types and logic
+- **React Frontend Ready**: Real-time job status updates can be consumed by a React frontend (optional)
 
 ## Available Job Types
 
 - `send_email` - Send email notifications
-- `process_image` - Process images with various operations
-- `generate_report` - Generate various types of reports
-- `backup_database` - Backup databases with different options
-- `fetch_data` - Fetch data from external APIs
-- `batch_process` - Process large datasets in batches
-- `send_notification` - Send notifications to multiple recipients
-- `cleanup_files` - Clean up old files from directories
+- `upload_file` - Upload a file to S3 (background, with temp file cleanup)
 
 ## Project Structure
 
@@ -72,17 +67,47 @@ background-job-processing-system/
    ```powershell
    python manage.py runserver
    ```
-7. **Start a Redis server** (required for Celery broker)
-   - Download and run Redis from https://redis.io/ if not already running.
+7. **Start a Redis server** (required for Celery broker and Channels)
+   - **Redis 5.0 or higher is required!**
+   - On Windows, use WSL, Docker, or a third-party Redis 5+ build. Example with Docker:
+     ```powershell
+     docker run -d -p 6379:6379 --name redis6 redis:6
+     ```
+   - Verify your Redis version:
+     ```powershell
+     redis-server --version
+     ```
+   - If you see errors about `BZPOPMIN`, your Redis version is too old.
 8. **Start the Celery worker**
    ```powershell
-   .venv\Scripts\celery -A job_system worker -l info
+   .venv\Scripts\celery -A job_system worker -l info -P solo
    ```
-9. **Copy the example environment file and update with your secrets**
+   - The `-P solo` flag is required for Celery on Windows.
+9. **Start the Django Channels ASGI server** (for WebSocket support)
    ```powershell
-   copy .env.example .env
-   # Then edit .env with your own credentials
+   daphne -b 127.0.0.1 -p 9000 job_system.asgi:application
    ```
+   - Or use `python manage.py runserver` for development (Channels will work if configured).
+10. **Copy the example environment file and update with your secrets**
+    ```powershell
+    copy .env.example .env
+    # Then edit .env with your own credentials
+    ```
+
+## Real-time Job Status Updates (WebSocket)
+
+- The backend uses Django Channels and Redis to broadcast job status updates.
+- A sample HTML/JS frontend is provided to connect to `/ws/jobs/status/` and display updates.
+- You can build a React frontend to consume these updates for a modern UI.
+
+## Troubleshooting
+
+### Redis BZPOPMIN Error
+If you see an error like:
+```
+redis.exceptions.ResponseError: unknown command 'BZPOPMIN'
+```
+Your Redis server is too old. Upgrade to Redis 5.0 or higher (see above for Windows instructions).
 
 ## API Endpoints
 
@@ -138,6 +163,7 @@ with open('myfile.txt', 'rb') as f:
 ## Configuration
 
 - **Celery Broker**: Uses Redis (`redis://localhost:6379/0`)
+- **Channels Layer**: Uses Redis (same instance, port 6379)
 - **Result Backend**: Uses Django DB (`django-db`)
 - **Database**: SQLite by default (change in `settings.py` for PostgreSQL)
 - **Job Types**: Defined in `jobs/models.py` as `JOB_TYPE_CHOICES`
@@ -226,7 +252,7 @@ The tests cover:
 - Validation for required and future `scheduled_time`
 - File size validation for uploads
 
-Test file location: `jobs/test_jobs.py`
+Test file location: `jobs/test_jobs.py`, `jobs/test_integration.py`
 
 ## Integration Tests
 
@@ -254,7 +280,11 @@ The integration tests cover:
 - django-celery-results
 - django-celery-beat
 - djangorestframework
-- redis (for broker)
+- channels
+- channels_redis
+- redis (for broker and Channels)
+- boto3 (for S3 upload)
+- drf-yasg (for API docs)
 - psycopg2-binary (if using PostgreSQL)
 
 ## License
