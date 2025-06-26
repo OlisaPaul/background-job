@@ -123,6 +123,30 @@ Your Redis server is too old. Upgrade to Redis 5.0 or higher (see above for Wind
 - `GET /api/jobs/types/` - Get available job types
 - `POST /api/jobs/upload-file/` - Upload a file to S3
 
+## Pagination
+
+- The jobs list endpoint (`GET /api/jobs/`) is paginated with 10 items per page.
+- Use the `?page=page_number` query parameter to navigate pages (e.g., `/api/jobs/?page=2`).
+- If `page` is not provided, the first page is returned by default.
+- If an invalid or out-of-range page is requested, an empty result or error is returned.
+
+Example:
+```http
+GET /api/jobs/?page=1
+```
+Response:
+```json
+{
+  "count": 42,
+  "next": "http://localhost:8000/api/jobs/?page=2",
+  "previous": null,
+  "results": [
+    { "id": 1, ... },
+    ...
+  ]
+}
+```
+
 ## Example Usage
 
 ### Creating a Job via API

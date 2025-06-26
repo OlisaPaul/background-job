@@ -114,3 +114,46 @@ class JobApiTests(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('scheduled_time', str(response.data))
+
+    def test_job_list_pagination_default(self):
+        url = reverse('job-list')
+        # Create 15 jobs
+        for i in range(15):
+            Job.objects.create(
+                job_type='send_email',
+                parameters={"recipient": f"user{i}@example.com", "subject": "s", "body": "b"},
+                schedule_type='immediate',
+            )
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('results', response.data)
+        self.assertEqual(len(response.data['results']), 10)
+        self.assertEqual(response.data['count'], 15)
+        self.assertIsNotNone(response.data['next'])
+        self.assertIsNone(response.data['previous'])
+
+    def test_job_list_pagination_second_page(self):
+        url = reverse('job-list')
+        for i in range(15):
+            Job.objects.create(
+                job_type='send_email',
+                parameters={"recipient": f"user{i}@example.com", "subject": "s", "body": "b"},
+                schedule_type='immediate',
+            )
+        response = self.client.get(url + '?page=2')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('results', response.data)
+        self.assertEqual(len(response.data['results']), 5)
+        self.assertEqual(response.data['count'], 15)
+        self.assertIsNotNone(response.data['previous'])
+
+    def test_job_list_pagination_invalid_page(self):
+        url = reverse('job-list')
+        response = self.client.get(url + '?page=999')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['results'], [])
+
+    def test_job_list_pagination_non_integer_page(self):
+        url = reverse('job-list')
+        response = self.client.get(url + '?page=abc')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)

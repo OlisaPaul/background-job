@@ -81,3 +81,26 @@ class JobIntegrationTests(APITestCase):
         job = Job.objects.get(id=response.data['id'])
         self.assertEqual(job.schedule_type, 'scheduled')
         self.assertEqual(job.scheduled_time.isoformat(), response.data['scheduled_time'].replace('Z', '+00:00'))
+
+    def test_job_list_pagination_integration(self):
+        url = reverse('job-list')
+        # Create 23 jobs
+        for i in range(23):
+            Job.objects.create(
+                job_type='send_email',
+                parameters={"recipient": f"user{i}@example.com", "subject": "s", "body": "b"},
+                schedule_type='immediate',
+            )
+        # First page
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 10)
+        self.assertEqual(response.data['count'], 23)
+        # Third page
+        response = self.client.get(url + '?page=3')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 3)
+        # Out-of-range page
+        response = self.client.get(url + '?page=5')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['results'], [])
