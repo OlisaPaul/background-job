@@ -8,6 +8,8 @@ from botocore.exceptions import BotoCoreError, ClientError
 import base64
 import os
 from django_celery_beat.models import PeriodicTask
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 
 @shared_task(bind=True, max_retries=3)
 def execute_job_task(self, job_id):
@@ -58,6 +60,19 @@ def execute_job_task(self, job_id):
             result = {'message': f"{job.job_type} completed successfully."}
         job.status = 'completed'
         job.result = result
+        # Notify websocket clients
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            'job_status',
+            {
+                'type': 'job_status_update',
+                'data': {
+                    'id': job.id,
+                    'status': job.status,
+                    'result': job.result,
+                }
+            }
+        )
     except Exception as exc:
         job.status = 'failed'
         job.retries += 1

@@ -10,6 +10,8 @@ from django_celery_beat.models import PeriodicTask, IntervalSchedule, CrontabSch
 import json
 from datetime import datetime
 from django.utils import timezone
+from django.views.generic import TemplateView
+
 
 class JobViewSet(viewsets.ModelViewSet):
     queryset = Job.objects.all().order_by('-created_at')
@@ -112,3 +114,7 @@ class JobViewSet(viewsets.ModelViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # Create your views here.
+
+class TestWebSocketView(TemplateView):
+    template_name = 'websocket_permissions.html'
+

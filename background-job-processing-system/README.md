@@ -221,6 +221,7 @@ python manage.py test jobs
 ```
 
 The tests cover:
+
 - Immediate and scheduled job creation (email and file upload)
 - Validation for required and future `scheduled_time`
 - File size validation for uploads
@@ -240,6 +241,7 @@ python manage.py test jobs
 Integration test file location: `jobs/test_integration.py`
 
 The integration tests cover:
+
 - Creating jobs via the API and verifying database persistence
 - Immediate job creation triggers Celery (mocked)
 - Immediate file upload creates both the file and the job, and triggers Celery (mocked)
