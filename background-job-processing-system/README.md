@@ -93,6 +93,7 @@ background-job-processing-system/
 - `POST /api/jobs/{id}/retry/` - Retry a failed job
 - `GET /api/jobs/stats/` - Get job statistics
 - `GET /api/jobs/types/` - Get available job types
+- `POST /api/jobs/upload-file/` - Upload a file to S3
 
 ## Example Usage
 
@@ -122,6 +123,18 @@ print(response.json())
 2. Log in with your superuser credentials
 3. Add or manage jobs from the Jobs section
 
+### Example File Upload via API (Python)
+
+```python
+import requests
+
+with open('myfile.txt', 'rb') as f:
+    files = {'file': f}
+    data = {'file_name': 'myfile.txt'}
+    response = requests.post('http://localhost:8000/api/jobs/upload-file/', files=files, data=data)
+    print(response.json())
+```
+
 ## Configuration
 
 - **Celery Broker**: Uses Redis (`redis://localhost:6379/0`)
@@ -129,6 +142,19 @@ print(response.json())
 - **Database**: SQLite by default (change in `settings.py` for PostgreSQL)
 - **Job Types**: Defined in `jobs/models.py` as `JOB_TYPE_CHOICES`
 - **API**: Powered by Django REST Framework
+
+## File Uploads (S3)
+
+- To upload a file to S3, use the endpoint:
+  - `POST /api/jobs/upload-file/`
+  - Use the DRF web UI or a tool like Postman.
+  - Fields:
+    - `file`: The file to upload (max 10 MB)
+    - `file_name`: The name to use in S3
+    - `priority`: (optional) Job priority
+    - `max_retries`: (optional) Max retries
+- The file is saved temporarily to disk, then uploaded to S3 in the background by Celery. The file is not stored in the database.
+- The job result will include a `file_url` with a direct link to the uploaded file.
 
 ## Environment Variables
 
