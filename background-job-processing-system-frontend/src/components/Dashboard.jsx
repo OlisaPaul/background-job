@@ -74,18 +74,25 @@ function Dashboard() {
               </tr>
             </thead>
             <tbody>
-              {jobs.map((job) => (
-                <tr key={job.id}>
-                  <td>{job.id}</td>
-                  <td>{job.job_type}</td>
-                  <td>{job.status}</td>
-                  <td>
-                    {job.scheduled_time
-                      ? new Date(job.scheduled_time).toLocaleString()
-                      : "-"}
-                  </td>
-                </tr>
-              ))}
+              {jobs.map((job) => {
+                let rowClass = "text-white";
+                if (job.status === "completed") rowClass += " table-success";
+                else if (job.status === "failed") rowClass += " table-danger";
+                else if (job.status === "running") rowClass += " table-warning";
+                else if (job.status === "pending") rowClass += " table-primary";
+                return (
+                  <tr key={job.id} className={rowClass}>
+                    <td>{job.id}</td>
+                    <td>{job.job_type}</td>
+                    <td>{job.status}</td>
+                    <td>
+                      {job.scheduled_time
+                        ? new Date(job.scheduled_time).toLocaleString()
+                        : "-"}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </Table>
         </Card.Body>
