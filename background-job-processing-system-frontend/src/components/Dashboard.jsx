@@ -206,7 +206,7 @@ function Dashboard() {
                     <th>SNO</th>
                     <th>Type</th>
                     <th>Status</th>
-                    {/* <th>Scheduled Time</th> */}
+                    <th>Scheduled Type</th>
                     <th>Action</th>
                     <th>Download</th>
                   </tr>
@@ -232,52 +232,58 @@ function Dashboard() {
 
                     return (
                       <tr
-                        key={job.id}
-                        className={rowClass}
-                        style={{ cursor: "pointer" }}
-                        onClick={() => navigate(`/jobs/${job.id}`)}
+                      key={job.id}
+                      className={rowClass}
+                      style={{ cursor: "pointer" }}
+                      onClick={() => navigate(`/jobs/${job.id}`)}
                       >
-                        <td>{sno}</td>
-                        <td>{humanizeJobType(job.job_type)}</td>
-                        <td>{job.status}</td>
-                        <td>
-                          {job.scheduled_time
-                            ? new Date(job.scheduled_time).toLocaleString()
-                            : "-"}
-                        </td>
-                        <td>
-                          <button
-                            className="btn btn-danger btn-sm me-2"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDelete(job.id);
-                            }}
-                          >
-                            Delete
-                          </button>
-                          <button
-                            className="btn btn-secondary btn-sm"
-                            disabled={job.status !== "failed"}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRetry(job.id);
-                            }}
-                          >
-                            Retry
-                          </button>
-                        </td>
-                        <td>
-                          <button
-                            className="btn btn-success btn-sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDownload(job);
-                            }}
-                            disabled={!job.file_url}
-                          >
-                            Download
-                          </button>
-                        </td>
+                      <td>{sno}</td>
+                      <td>
+                        {humanizeJobType(job.job_type).charAt(0).toUpperCase() +
+                        humanizeJobType(job.job_type).slice(1)}
+                      </td>
+                      <td>
+                        {job.status.charAt(0).toUpperCase() + job.status.slice(1)}
+                      </td>
+                      <td>
+                        {job.schedule_type
+                        ? job.schedule_type.charAt(0).toUpperCase() +
+                          job.schedule_type.slice(1)
+                        : ""}
+                      </td>
+                      <td>
+                        <button
+                        className="btn btn-danger btn-sm me-2"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(job.id);
+                        }}
+                        >
+                        Delete
+                        </button>
+                        <button
+                        className="btn btn-secondary btn-sm"
+                        disabled={job.status !== "failed"}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRetry(job.id);
+                        }}
+                        >
+                        Retry
+                        </button>
+                      </td>
+                      <td>
+                        <button
+                        className="btn btn-success btn-sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDownload(job);
+                        }}
+                        disabled={!job.file_url}
+                        >
+                        Download
+                        </button>
+                      </td>
                       </tr>
                     );
                   })}

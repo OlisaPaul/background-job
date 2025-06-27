@@ -4,8 +4,9 @@ import Dashboard from "./components/Dashboard";
 import EmailJobForm from "./components/EmailJobForm";
 import FileUploadForm from "./components/FileUploadForm";
 import JobDetails from "./components/JobDetails";
+import BulkEmailJobForm from "./components/BulkEmailJobForm";
 // Add react-icons
-import { FaHome, FaEnvelope, FaUpload } from "react-icons/fa";
+import { FaHome, FaEnvelope, FaUpload, FaUsers } from "react-icons/fa";
 
 function App() {
   return (
@@ -67,12 +68,28 @@ function App() {
         >
           <FaUpload style={{ marginRight: 2 }} /> Upload File
         </Link>
+        <Link
+          to="/bulk-send-email"
+          style={{
+            marginLeft: 20,
+            color: "#fff",
+            fontWeight: 600,
+            textDecoration: "none",
+            fontSize: 18,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 2,
+          }}
+        >
+          <FaUsers style={{ marginRight: 2 }} /> Bulk Send Email
+        </Link>
       </nav>
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/send-email" element={<EmailJobForm />} />
         <Route path="/upload-file" element={<FileUploadForm />} />
         <Route path="/jobs/:id" element={<JobDetails />} />
+        <Route path="/bulk-send-email" element={<BulkEmailJobForm />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
