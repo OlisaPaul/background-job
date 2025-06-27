@@ -157,3 +157,28 @@ class JobApiTests(APITestCase):
         url = reverse('job-list')
         response = self.client.get(url + '?page=abc')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_job_list_filter_by_job_type(self):
+        url = reverse('job-list')
+        Job.objects.create(job_type='send_email', parameters={"recipient": "a@a.com", "subject": "s", "body": "b"}, schedule_type='immediate')
+        Job.objects.create(job_type='upload_file', parameters={"file_name": "f", "temp_path": "t"}, schedule_type='immediate')
+        response = self.client.get(url + '?job_type=send_email')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(all(j['job_type'] == 'send_email' for j in response.data['results']))
+
+    def test_job_list_filter_by_status(self):
+        url = reverse('job-list')
+        Job.objects.create(job_type='send_email', parameters={"recipient": "a@a.com", "subject": "s", "body": "b"}, status='completed', schedule_type='immediate')
+        Job.objects.create(job_type='send_email', parameters={"recipient": "b@b.com", "subject": "s", "body": "b"}, status='failed', schedule_type='immediate')
+        response = self.client.get(url + '?status=completed')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(all(j['status'] == 'completed' for j in response.data['results']))
+
+    def test_job_list_filter_by_job_type_and_status(self):
+        url = reverse('job-list')
+        Job.objects.create(job_type='send_email', parameters={"recipient": "a@a.com", "subject": "s", "body": "b"}, status='completed', schedule_type='immediate')
+        Job.objects.create(job_type='upload_file', parameters={"file_name": "f", "temp_path": "t"}, status='completed', schedule_type='immediate')
+        Job.objects.create(job_type='send_email', parameters={"recipient": "b@b.com", "subject": "s", "body": "b"}, status='failed', schedule_type='immediate')
+        response = self.client.get(url + '?job_type=send_email&status=completed')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(all(j['job_type'] == 'send_email' and j['status'] == 'completed' for j in response.data['results']))

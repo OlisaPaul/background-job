@@ -123,6 +123,18 @@ Your Redis server is too old. Upgrade to Redis 5.0 or higher (see above for Wind
 - `GET /api/jobs/types/` - Get available job types
 - `POST /api/jobs/upload-file/` - Upload a file to S3
 
+## Filtering
+
+- You can filter jobs by type and status using query parameters:
+  - `GET /api/jobs/?job_type=send_email`
+  - `GET /api/jobs/?status=completed`
+  - Combine filters: `GET /api/jobs/?job_type=upload_file&status=failed`
+
+Example:
+```http
+GET /api/jobs/?job_type=send_email&status=completed&page=1
+```
+
 ## Pagination
 
 - The jobs list endpoint (`GET /api/jobs/`) is paginated with 10 items per page.

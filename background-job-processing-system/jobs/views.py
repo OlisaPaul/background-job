@@ -3,6 +3,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework import filters
 from .models import Job, JOB_TYPE_CHOICES
 from .serializers import JobSerializer, FileUploadJobSerializer
 from .tasks import execute_job_task
@@ -15,6 +16,8 @@ from django.views.generic import TemplateView
 
 class JobViewSet(viewsets.ModelViewSet):
     queryset = Job.objects.all().order_by('-created_at')
+    filter_backends = [filters.OrderingFilter]
+    ordering_fields = ['created_at', 'priority', 'status']
 
     def get_serializer_class(self):
         if self.action == 'upload_file':
@@ -30,6 +33,16 @@ class JobViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         job = serializer.save()
         self.handle_job_scheduling(job)
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        job_type = self.request.query_params.get('job_type')
+        status_param = self.request.query_params.get('status')
+        if job_type:
+            queryset = queryset.filter(job_type=job_type)
+        if status_param:
+            queryset = queryset.filter(status=status_param)
+        return queryset
 
     # def create_periodic_task(self, job):
     #     PeriodicTask.objects.filter(name=f'job-{job.id}').delete()
