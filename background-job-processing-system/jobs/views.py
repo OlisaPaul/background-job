@@ -196,4 +196,3 @@ class JobViewSet(viewsets.ModelViewSet):
 
 class TestWebSocketView(TemplateView):
     template_name = 'websocket_permissions.html'
-
