@@ -9,6 +9,7 @@ function EmailJobForm() {
   const [body, setBody] = useState("");
   const [scheduleType, setScheduleType] = useState("immediate");
   const [scheduledTime, setScheduledTime] = useState("");
+  const [frequency, setFrequency] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
@@ -22,10 +23,13 @@ function EmailJobForm() {
       parameters: { recipient, subject, body },
       schedule_type: scheduleType,
     };
-    if (scheduleType === "scheduled") {
+    if (scheduleType === "scheduled" || scheduleType === "interval") {
       // Convert local datetime to UTC ISO string
       const local = new Date(scheduledTime);
       data.scheduled_time = local.toISOString();
+    }
+    if (scheduleType === "interval") {
+      data.frequency = frequency;
     }
     try {
       const res = await fetch(`${API_BASE}/jobs/`, {
@@ -93,11 +97,15 @@ function EmailJobForm() {
             <br />
             <select
               value={scheduleType}
-              onChange={(e) => setScheduleType(e.target.value)}
+              onChange={(e) => {
+                setScheduleType(e.target.value);
+                setFrequency("");
+              }}
               className="form-control"
             >
               <option value="immediate">Immediate</option>
               <option value="scheduled">Scheduled</option>
+              <option value="interval">Interval</option>
             </select>
           </div>
           {scheduleType === "scheduled" && (
@@ -112,6 +120,37 @@ function EmailJobForm() {
                 className="form-control"
               />
             </div>
+          )}
+          {scheduleType === "interval" && (
+            <>
+              <div className="form-group">
+                <label>Frequency:</label>
+                <br />
+                <select
+                  value={frequency}
+                  onChange={(e) => setFrequency(e.target.value)}
+                  required
+                  className="form-control"
+                >
+                  <option value="">Select Frequency</option>
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="hourly">Hourly</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Start Time (your local time):</label>
+                <br />
+                <input
+                  type="datetime-local"
+                  value={scheduledTime}
+                  onChange={(e) => setScheduledTime(e.target.value)}
+                  required
+                  className="form-control"
+                />
+              </div>
+            </>
           )}
           <button
             type="submit"

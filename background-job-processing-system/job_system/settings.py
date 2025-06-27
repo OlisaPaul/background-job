@@ -147,6 +147,12 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 
+CELERY_RESULT_BACKEND = 'django-db'
+
+# CELERY BEAT
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+
+
 # Django REST Framework settings (optional, can be extended)
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [

@@ -6,9 +6,11 @@ class JobSerializer(serializers.ModelSerializer):
     file_url = serializers.SerializerMethodField()
     schedule_type = serializers.ChoiceField(choices=[
         ('immediate', 'Immediate'),
+        ('interval', 'Interval'),
         ('scheduled', 'Scheduled')
     ], default='immediate', required=False)
     scheduled_time = serializers.DateTimeField(required=False, allow_null=True)
+    frequency = serializers.ChoiceField(required=False, allow_blank=True, choices=[('daily', 'Daily'), ('weekly', 'Weekly'), ('monthly', 'Monthly'), ('hourly', 'Hourly')], default='daily')
 
     class Meta:
         model = Job

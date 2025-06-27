@@ -7,7 +7,7 @@ from rest_framework import filters
 from .models import Job, JOB_TYPE_CHOICES
 from .serializers import JobSerializer, FileUploadJobSerializer
 from .tasks import execute_job_task
-from django_celery_beat.models import PeriodicTask, IntervalSchedule, CrontabSchedule
+from django_celery_beat.models import PeriodicTask, CrontabSchedule, ClockedSchedule
 import json
 from datetime import datetime
 from django.utils import timezone
@@ -29,8 +29,10 @@ class JobViewSet(viewsets.ModelViewSet):
     def handle_job_scheduling(self, job):
         if job.schedule_type == 'immediate':
             execute_job_task.delay(job.id)
-        else: 
+        elif job.schedule_type == 'scheduled': 
             execute_job_task.apply_async(args=[job.id], eta=job.scheduled_time)
+        else:
+            self.create_periodic_task(job)
         
     def perform_create(self, serializer):
         job = serializer.save()
@@ -46,53 +48,58 @@ class JobViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(status=status_param)
         return queryset
 
-    # def create_periodic_task(self, job):
-    #     PeriodicTask.objects.filter(name=f'job-{job.id}').delete()
-    #     start = job.scheduled_time or timezone.now()
-    #     minute = str(start.minute)
-    #     hour = str(start.hour)
-    #     day = str(start.day)
-    #     month = str(start.month)
-    #     enabled = True
-    #     if job.scheduled_time and job.scheduled_time > timezone.now():
-    #         enabled = False
-    #     if job.schedule_type == 'hourly':
-    #         schedule, _ = CrontabSchedule.objects.get_or_create(
-    #             minute=minute, hour='*', day_of_month='*', month_of_year='*', day_of_week='*'
-    #         )
-    #     elif job.schedule_type == 'daily':
-    #         schedule, _ = CrontabSchedule.objects.get_or_create(
-    #             minute=minute, hour=hour, day_of_month='*', month_of_year='*', day_of_week='*'
-    #         )
-    #     elif job.schedule_type == 'monthly':
-    #         schedule, _ = CrontabSchedule.objects.get_or_create(
-    #             minute=minute, hour=hour, day_of_month=day, month_of_year='*', day_of_week='*'
-    #         )
-    #     elif job.schedule_type == 'yearly':
-    #         schedule, _ = CrontabSchedule.objects.get_or_create(
-    #             minute=minute, hour=hour, day_of_month=day, month_of_year=month, day_of_week='*'
-    #         )
-    #     else:
-    #         return
-    #     pt = PeriodicTask.objects.create(
-    #         crontab=schedule,
-    #         name=f'job-{job.id}',
-    #         task='jobs.tasks.execute_job_task',
-    #         args=json.dumps([job.id]),
-    #         start_time=start,
-    #         enabled=enabled
-    #     )
-    #     if not enabled:
-    #         from django_celery_beat.models import ClockedSchedule
-    #         clocked, _ = ClockedSchedule.objects.get_or_create(clocked_time=start)
-    #         PeriodicTask.objects.create(
-    #             clocked=clocked,
-    #             one_off=True,
-    #             name=f'enable-job-{job.id}',
-    #             task='jobs.tasks.enable_periodic_task',
-    #             args=json.dumps([pt.id]),
-    #             enabled=True
-    #         )
+    def create_periodic_task(self, job):
+        # Remove any previous task with this job ID
+        PeriodicTask.objects.filter(name=f'job-{job.id}').delete()
+        PeriodicTask.objects.filter(name=f'enable-job-{job.id}').delete()
+
+        start = job.scheduled_time or timezone.now()
+        enabled = not (job.scheduled_time and job.scheduled_time > timezone.now())
+
+        # Helper to get or create a CrontabSchedule
+        def get_crontab_schedule(job, start):
+            minute = str(start.minute)
+            hour = str(start.hour)
+            day = str(start.day)
+            month = str(start.month)
+
+            schedule_map = {
+                'hourly': dict(minute=minute, hour='*', day_of_month='*', month_of_year='*', day_of_week='*'),
+                'daily': dict(minute=minute, hour=hour, day_of_month='*', month_of_year='*', day_of_week='*'),
+                'monthly': dict(minute=minute, hour=hour, day_of_month=day, month_of_year='*', day_of_week='*'),
+                'yearly': dict(minute=minute, hour=hour, day_of_month=day, month_of_year=month, day_of_week='*'),
+            }
+
+            schedule_params = schedule_map.get(job.frequency)
+            print(f"Creating schedule with params: {schedule_params}")
+            if not schedule_params:
+                raise ValueError(f"Unsupported schedule type: {job.frequency}")
+
+            return CrontabSchedule.objects.get_or_create(**schedule_params)[0]
+
+        # Create disabled main task with crontab or enabled one immediately
+        schedule = get_crontab_schedule(job, start)
+        print(f"Creating schedule with params: {schedule}")
+        periodic_task = PeriodicTask.objects.create(
+            crontab=schedule,
+            name=f'job-{job.id}',
+            task='jobs.tasks.execute_job_task',
+            args=json.dumps([job.id]),
+            start_time=start,
+            enabled=True
+        )
+
+        # If job is scheduled for the future, create a one-off clocked task to enable it
+        if not enabled:
+            clocked = ClockedSchedule.objects.get_or_create(clocked_time=start)[0]
+            PeriodicTask.objects.create(
+                clocked=clocked,
+                one_off=True,
+                name=f'enable-job-{job.id}',
+                task='jobs.tasks.enable_periodic_task',
+                args=json.dumps([periodic_task.id]),
+                enabled=True
+            )
 
     @action(detail=False, methods=['get'])
     def types(self, request):

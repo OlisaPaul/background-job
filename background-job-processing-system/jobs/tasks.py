@@ -87,5 +87,6 @@ def enable_periodic_task(periodic_task_id):
         pt = PeriodicTask.objects.get(id=periodic_task_id)
         pt.enabled = True
         pt.save()
+        print(f"[✓] Periodic task '{pt.name}' (ID: {periodic_task_id}) has been enabled.")
     except PeriodicTask.DoesNotExist:
-        pass
+        print(f"[✗] Periodic task with ID {periodic_task_id} not found.")

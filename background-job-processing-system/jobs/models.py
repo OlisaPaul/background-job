@@ -29,6 +29,7 @@ class Job(models.Model):
     result = models.JSONField(null=True, blank=True)
     schedule_type = models.CharField(max_length=20, choices=SCHEDULE_TYPE_CHOICES, default='immediate')
     scheduled_time = models.DateTimeField(null=True, blank=True)
+    frequency = models.CharField(max_length=20, blank=True, null=True, choices=[('daily', 'Daily'), ('weekly', 'Weekly'), ('monthly', 'Monthly'), ('hourly', 'Hourly')], default='daily')
 
     def __str__(self):
         return f"{self.job_type} (Priority: {self.priority})"
