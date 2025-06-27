@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./FormStyles.css"; // Import the shared CSS file
-
-const API_BASE = "http://localhost:8000/api";
+import API_BASE from "../api/config";
 
 function FileUploadForm() {
   const [file, setFile] = useState(null);

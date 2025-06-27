@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Pie } from "react-chartjs-2";
 import "chart.js/auto";
-
-const API_BASE = "http://localhost:8000/api";
+import API_BASE from "../api/config";
 
 function JobStatsChart() {
   const [stats, setStats] = useState(null);

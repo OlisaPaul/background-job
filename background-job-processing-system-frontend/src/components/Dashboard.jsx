@@ -4,8 +4,8 @@ import Table from "react-bootstrap/Table";
 import Card from "react-bootstrap/Card";
 import "bootstrap/dist/css/bootstrap.min.css";
 import JobStatsChart from "./JobStatsChart";
+import API_BASE from "../api/config";
 
-const API_BASE = "http://localhost:8000/api";
 // Dynamically determine WebSocket URL based on current location and fallback to 9000 if 8000 fails
 function getWebSocketUrl() {
   const loc = window.location;

@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./FormStyles.css"; // Import the shared CSS file
-
-const API_BASE = "http://localhost:8000/api";
+import API_BASE from "../api/config";
 
 function EmailJobForm() {
   const [recipient, setRecipient] = useState("");
@@ -112,10 +111,6 @@ function EmailJobForm() {
                 required
                 className="form-control"
               />
-              <div style={{ fontSize: "0.9em", color: "#555" }}>
-                This will be converted to UTC when submitted. Your current
-                timezone: {Intl.DateTimeFormat().resolvedOptions().timeZone}
-              </div>
             </div>
           )}
           <button
