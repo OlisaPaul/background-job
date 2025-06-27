@@ -10,7 +10,12 @@ class JobSerializer(serializers.ModelSerializer):
         ('scheduled', 'Scheduled')
     ], default='immediate', required=False)
     scheduled_time = serializers.DateTimeField(required=False, allow_null=True)
-    frequency = serializers.ChoiceField(required=False, allow_blank=True, choices=[('daily', 'Daily'), ('weekly', 'Weekly'), ('monthly', 'Monthly'), ('hourly', 'Hourly')], default='daily')
+    frequency = serializers.ChoiceField(choices=[
+        ('daily', 'Daily'),
+        ('weekly', 'Weekly'),
+        ('monthly', 'Monthly'),
+        ('hourly', 'Hourly')
+    ], default='daily', required=False, allow_blank=True)
 
     class Meta:
         model = Job

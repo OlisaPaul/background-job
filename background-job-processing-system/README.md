@@ -253,6 +253,24 @@ Jobs can be scheduled in two ways using the `schedule_type` field:
 }
 ```
 
+## Frequency (Recurring Jobs)
+
+- The `Job` model now includes a `frequency` field for recurring jobs.
+- Supported values: `daily`, `weekly`, `monthly`, `hourly` (default: `daily`).
+- Example JSON for a recurring job:
+
+```json
+{
+  "job_type": "send_email",
+  "parameters": { ... },
+  "schedule_type": "scheduled",
+  "scheduled_time": "2025-07-01T12:00:00Z",
+  "frequency": "weekly"
+}
+```
+
+- The `frequency` field is optional for immediate jobs and can be used for future support of recurring jobs.
+
 - For file uploads, use the `/api/jobs/upload-file/` endpoint with the same `schedule_type` logic.
 - Recurring jobs (hourly, daily, etc.) are not supported in this version.
 
