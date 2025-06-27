@@ -123,6 +123,57 @@ Your Redis server is too old. Upgrade to Redis 5.0 or higher (see above for Wind
 - `GET /api/jobs/types/` - Get available job types
 - `POST /api/jobs/upload-file/` - Upload a file to S3
 
+## Dedicated Endpoints for Job Types
+
+- `POST /api/jobs/send-email/` — Create an email job (send email now or schedule for later)
+- `POST /api/jobs/upload-file/` — Create a file upload job (upload now or schedule for later)
+
+### Example: Send Email
+
+POST `/api/jobs/send-email/`
+
+```json
+{
+  "recipient": "user@example.com",
+  "subject": "Welcome!",
+  "body": "Welcome to our service!",
+  "priority": 5,
+  "max_retries": 3,
+  "schedule_type": "immediate"
+}
+```
+
+### Example: Upload File
+
+POST `/api/jobs/upload-file/`
+(Form-data: file, schedule_type, scheduled_time, etc.)
+
+- Both endpoints support `schedule_type` (`immediate` or `scheduled`) and `scheduled_time` for future jobs.
+- The generic `/api/jobs/` endpoint is still available for admin/advanced use.
+
+### Example: Bulk Personalized Email
+
+POST `/api/jobs/send-email/`
+
+```
+{
+  "emails": [
+    {"recipient": "alice@example.com", "subject": "Hi Alice!", "body": "Hello Alice, welcome!"},
+    {"recipient": "bob@example.com", "subject": "Hi Bob!", "body": "Hello Bob, welcome!"}
+  ],
+  "schedule_type": "immediate"
+}
+```
+
+- You must provide exactly one of `recipient`, `recipients`, or `emails`.
+- For `emails`, each object must have its own `recipient`, `subject`, and `body`.
+- The response will be a list of job objects (one per personalized email).
+
+#### Validation
+
+- If you provide more than one of `recipient`, `recipients`, or `emails`, you will get a 400 error.
+- If any email is missing required fields, you will get a 400 error.
+
 ## Filtering
 
 - You can filter jobs by type and status using query parameters:

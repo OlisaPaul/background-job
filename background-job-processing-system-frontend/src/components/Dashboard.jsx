@@ -79,7 +79,8 @@ function Dashboard() {
       fetch(`${API_BASE}/jobs/${id}/`, { method: "DELETE" })
         .then((res) => {
           if (res.ok) {
-            setJobs((prevJobs) => prevJobs.filter((job) => job.id !== id));
+            // After delete, refetch jobs for the current page
+            fetchJobs(page);
           } else {
             alert("Failed to delete job.");
           }
@@ -247,14 +248,20 @@ function Dashboard() {
                         <td>
                           <button
                             className="btn btn-danger btn-sm me-2"
-                            onClick={() => handleDelete(job.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(job.id);
+                            }}
                           >
                             Delete
                           </button>
                           <button
                             className="btn btn-secondary btn-sm"
                             disabled={job.status !== "failed"}
-                            onClick={() => handleRetry(job.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRetry(job.id);
+                            }}
                           >
                             Retry
                           </button>
@@ -262,7 +269,10 @@ function Dashboard() {
                         <td>
                           <button
                             className="btn btn-success btn-sm"
-                            onClick={() => handleDownload(job)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDownload(job);
+                            }}
                             disabled={!job.file_url}
                           >
                             Download

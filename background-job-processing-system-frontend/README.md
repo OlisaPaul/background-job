@@ -38,7 +38,9 @@ This is a React frontend (Vite + React) for the Django background job processing
 ## Job Creation API Examples
 
 ### Send Email Job (JSON)
+
 POST `/api/jobs/`
+
 ```json
 {
   "job_type": "send_email",
@@ -54,7 +56,9 @@ POST `/api/jobs/`
 ```
 
 ### File Upload Job (multipart/form-data)
+
 POST `/api/jobs/upload-file/`
+
 - `file`: (the file itself)
 - `schedule_type`: "immediate", "scheduled"
 - `scheduled_time`: "2025-06-27T15:00:00Z" (if scheduled)

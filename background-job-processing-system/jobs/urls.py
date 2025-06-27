@@ -7,6 +7,8 @@ router.register(r'jobs', JobViewSet, basename='job')
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('jobs/send-email/', JobViewSet.as_view({'post': 'send_email'}), name='job-send-email'),
+    path('jobs/upload-file/', JobViewSet.as_view({'post': 'upload_file_standalone'}), name='job-upload-file-standalone'),
 ]
 
 urlpatterns.append(path('test-websocket/',

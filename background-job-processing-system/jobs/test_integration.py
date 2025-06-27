@@ -104,3 +104,58 @@ class JobIntegrationTests(APITestCase):
         response = self.client.get(url + '?page=5')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['results'], [])
+
+    @patch('jobs.tasks.execute_job_task.delay')
+    def test_immediate_email_job_triggers_celery_via_dedicated_endpoint(self, mock_celery_delay):
+        url = reverse('job-send-email')
+        data = {
+            'recipient': 'integration@example.com',
+            'subject': 'Integration',
+            'body': 'Integration test',
+            'schedule_type': 'immediate'
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        job = Job.objects.get(id=response.data['id'])
+        self.assertEqual(job.status, 'pending')
+        mock_celery_delay.assert_called_once_with(job.id)
+
+    @patch('jobs.tasks.execute_job_task.delay')
+    def test_immediate_file_upload_job_creates_file_and_job_via_dedicated_endpoint(self, mock_celery_delay):
+        url = reverse('job-upload-file-standalone')
+        file_content = b'integration test file'
+        file = SimpleUploadedFile('integration.txt', file_content, content_type='text/plain')
+        data = {
+            'file': file,
+            'schedule_type': 'immediate',
+        }
+        response = self.client.post(url, data, format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        job_id = response.data['id']
+        job = Job.objects.get(id=job_id)
+        self.assertEqual(job.status, 'pending')
+        params = job.parameters
+        self.assertTrue(os.path.exists(params['temp_path']))
+        mock_celery_delay.assert_called_once_with(job.id)
+        # Clean up temp file
+        os.remove(params['temp_path'])
+
+    @patch('jobs.tasks.execute_job_task.delay')
+    def test_personalized_bulk_email_jobs_trigger_celery(self, mock_celery_delay):
+        url = reverse('job-send-email')
+        data = {
+            'emails': [
+                {'recipient': 'a@example.com', 'subject': 'A', 'body': 'Hello A'},
+                {'recipient': 'b@example.com', 'subject': 'B', 'body': 'Hello B'},
+            ],
+            'schedule_type': 'immediate'
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(len(response.data), 2)
+        jobs = Job.objects.filter(parameters__recipient__in=['a@example.com', 'b@example.com'])
+        self.assertEqual(jobs.count(), 2)
+        # Should trigger celery for each job
+        self.assertEqual(mock_celery_delay.call_count, 2)
+        called_ids = {call.args[0] for call in mock_celery_delay.call_args_list}
+        self.assertEqual(set(jobs.values_list('id', flat=True)), called_ids)

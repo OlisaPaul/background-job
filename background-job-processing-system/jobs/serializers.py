@@ -91,3 +91,99 @@ class FileUploadJobSerializer(serializers.Serializer):
             scheduled_time=validated_data.get('scheduled_time', None)
         )
         return job
+
+class EmailMessageSerializer(serializers.Serializer):
+    recipient = serializers.EmailField()
+    subject = serializers.CharField()
+    body = serializers.CharField()
+
+class SendEmailJobSerializer(serializers.Serializer):
+    recipient = serializers.EmailField(required=False)
+    recipients = serializers.ListField(
+        child=serializers.EmailField(), required=False, allow_empty=False
+    )
+    emails = EmailMessageSerializer(many=True, required=False)
+    subject = serializers.CharField(required=False)
+    body = serializers.CharField(required=False)
+    priority = serializers.IntegerField(default=5)
+    max_retries = serializers.IntegerField(default=3)
+    schedule_type = serializers.ChoiceField(choices=[
+        ('immediate', 'Immediate'),
+        ('scheduled', 'Scheduled'),
+    ], default='immediate', required=False)
+    scheduled_time = serializers.DateTimeField(required=False, allow_null=True)
+    frequency = serializers.ChoiceField(choices=[
+        ('daily', 'Daily'),
+        ('weekly', 'Weekly'),
+        ('monthly', 'Monthly'),
+        ('hourly', 'Hourly')
+    ], default='daily', required=False, allow_blank=True)
+
+    def validate(self, data):
+        recipients = data.get('recipients')
+        recipient = data.get('recipient')
+        emails = data.get('emails')
+        has_single = recipient is not None
+        has_bulk = recipients is not None
+        has_emails = emails is not None
+        if sum([has_single, has_bulk, has_emails]) != 1:
+            raise serializers.ValidationError('Provide exactly one of recipient, recipients, or emails.')
+        if has_emails:
+            if not isinstance(emails, list) or not emails:
+                raise serializers.ValidationError('emails must be a non-empty list.')
+            # Each item validated by nested serializer
+        else:
+            if not data.get('subject') or not data.get('body'):
+                raise serializers.ValidationError('subject and body are required for single or bulk email.')
+        schedule_type = data.get('schedule_type', 'immediate')
+        scheduled_time = data.get('scheduled_time', None)
+        if schedule_type == 'immediate' and scheduled_time:
+            raise serializers.ValidationError('scheduled_time must not be set for immediate jobs.')
+        if schedule_type == 'scheduled':
+            if not scheduled_time:
+                raise serializers.ValidationError('scheduled_time is required for scheduled jobs.')
+            from django.utils import timezone
+            if scheduled_time <= timezone.now():
+                raise serializers.ValidationError('scheduled_time must be in the future.')
+        return data
+
+    def create(self, validated_data):
+        jobs = []
+        if validated_data.get('emails'):
+            for email_obj in validated_data['emails']:
+                job = Job.objects.create(
+                    job_type='send_email',
+                    parameters={
+                        'recipient': email_obj['recipient'],
+                        'subject': email_obj['subject'],
+                        'body': email_obj['body'],
+                    },
+                    priority=validated_data.get('priority', 5),
+                    max_retries=validated_data.get('max_retries', 3),
+                    schedule_type=validated_data.get('schedule_type', 'immediate'),
+                    scheduled_time=validated_data.get('scheduled_time', None),
+                    frequency=validated_data.get('frequency', 'daily'),
+                )
+                jobs.append(job)
+        else:
+            recipients = []
+            if validated_data.get('recipient'):
+                recipients = [validated_data['recipient']]
+            elif validated_data.get('recipients'):
+                recipients = validated_data['recipients']
+            for email in recipients:
+                job = Job.objects.create(
+                    job_type='send_email',
+                    parameters={
+                        'recipient': email,
+                        'subject': validated_data['subject'],
+                        'body': validated_data['body'],
+                    },
+                    priority=validated_data.get('priority', 5),
+                    max_retries=validated_data.get('max_retries', 3),
+                    schedule_type=validated_data.get('schedule_type', 'immediate'),
+                    scheduled_time=validated_data.get('scheduled_time', None),
+                    frequency=validated_data.get('frequency', 'daily'),
+                )
+                jobs.append(job)
+        return jobs if len(jobs) > 1 else jobs[0]

@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework import filters
 from .models import Job, JOB_TYPE_CHOICES
-from .serializers import JobSerializer, FileUploadJobSerializer
+from .serializers import JobSerializer, FileUploadJobSerializer, SendEmailJobSerializer
 from .tasks import execute_job_task
 from django_celery_beat.models import PeriodicTask, CrontabSchedule, ClockedSchedule
 import json
@@ -24,6 +24,8 @@ class JobViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action == 'upload_file':
             return FileUploadJobSerializer
+        elif self.action == 'send_email':
+            return SendEmailJobSerializer
         return JobSerializer
 
     def handle_job_scheduling(self, job):
@@ -125,6 +127,29 @@ class JobViewSet(viewsets.ModelViewSet):
             'completed': Job.objects.filter(status='completed').count(),
             'failed': Job.objects.filter(status='failed').count(),
         })
+
+    @action(detail=False, methods=['post'], url_path='send-email')
+    def send_email(self, request):
+        serializer = SendEmailJobSerializer(data=request.data)
+        if serializer.is_valid():
+            jobs = serializer.save()
+            if isinstance(jobs, list):
+                for job in jobs:
+                    self.handle_job_scheduling(job)
+                return Response([JobSerializer(job).data for job in jobs], status=status.HTTP_201_CREATED)
+            else:
+                self.handle_job_scheduling(jobs)
+                return Response(JobSerializer(jobs).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['post'], parser_classes=[MultiPartParser, FormParser], url_path='upload-file-standalone')
+    def upload_file_standalone(self, request):
+        serializer = FileUploadJobSerializer(data=request.data)
+        if serializer.is_valid():
+            job = serializer.save()
+            self.handle_job_scheduling(job)
+            return Response(JobSerializer(job).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=False, methods=['post'], parser_classes=[MultiPartParser, FormParser], url_path='upload-file')
     def upload_file(self, request):

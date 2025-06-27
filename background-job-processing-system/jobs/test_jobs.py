@@ -182,3 +182,111 @@ class JobApiTests(APITestCase):
         response = self.client.get(url + '?job_type=send_email&status=completed')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(all(j['job_type'] == 'send_email' and j['status'] == 'completed' for j in response.data['results']))
+
+    def test_create_immediate_email_job_via_dedicated_endpoint(self):
+        url = reverse('job-send-email')
+        data = {
+            'recipient': 'test@example.com',
+            'subject': 'Test',
+            'body': 'Hello',
+            'schedule_type': 'immediate'
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['schedule_type'], 'immediate')
+        self.assertIsNone(response.data['scheduled_time'])
+        self.assertEqual(response.data['job_type'], 'send_email')
+
+    def test_create_scheduled_email_job_via_dedicated_endpoint(self):
+        url = reverse('job-send-email')
+        future_time = (timezone.now() + timezone.timedelta(hours=1)).isoformat()
+        data = {
+            'recipient': 'test@example.com',
+            'subject': 'Test',
+            'body': 'Hello',
+            'schedule_type': 'scheduled',
+            'scheduled_time': future_time
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['schedule_type'], 'scheduled')
+        self.assertIsNotNone(response.data['scheduled_time'])
+        self.assertEqual(response.data['job_type'], 'send_email')
+
+    def test_create_immediate_file_upload_job_via_dedicated_endpoint(self):
+        url = reverse('job-upload-file-standalone')
+        file_content = b'hello world' * 100
+        file = SimpleUploadedFile('test.txt', file_content, content_type='text/plain')
+        data = {
+            'file': file,
+            'schedule_type': 'immediate',
+        }
+        response = self.client.post(url, data, format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['schedule_type'], 'immediate')
+        self.assertIsNone(response.data['scheduled_time'])
+        self.assertEqual(response.data['job_type'], 'upload_file')
+
+    def test_create_scheduled_file_upload_job_via_dedicated_endpoint(self):
+        url = reverse('job-upload-file-standalone')
+        file_content = b'hello world' * 100
+        file = SimpleUploadedFile('test.txt', file_content, content_type='text/plain')
+        future_time = (timezone.now() + timezone.timedelta(hours=1)).isoformat()
+        data = {
+            'file': file,
+            'schedule_type': 'scheduled',
+            'scheduled_time': future_time
+        }
+        response = self.client.post(url, data, format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['schedule_type'], 'scheduled')
+        self.assertIsNotNone(response.data['scheduled_time'])
+        self.assertEqual(response.data['job_type'], 'upload_file')
+
+    def test_create_personalized_bulk_email_jobs(self):
+        url = reverse('job-send-email')
+        data = {
+            'emails': [
+                {'recipient': 'a@example.com', 'subject': 'A', 'body': 'Hello A'},
+                {'recipient': 'b@example.com', 'subject': 'B', 'body': 'Hello B'},
+                {'recipient': 'c@example.com', 'subject': 'C', 'body': 'Hello C'},
+            ],
+            'schedule_type': 'immediate'
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIsInstance(response.data, list)
+        self.assertEqual(len(response.data), 3)
+        for i, email in enumerate(['a@example.com', 'b@example.com', 'c@example.com']):
+            self.assertEqual(response.data[i]['parameters']['recipient'], email)
+            self.assertEqual(response.data[i]['job_type'], 'send_email')
+            self.assertEqual(response.data[i]['schedule_type'], 'immediate')
+
+    def test_emails_bulk_email_validation(self):
+        url = reverse('job-send-email')
+        # Empty list
+        data = {'emails': [], 'schedule_type': 'immediate'}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        # Missing subject/body in one item
+        data = {
+            'emails': [
+                {'recipient': 'a@example.com', 'subject': 'A', 'body': 'Hello'},
+                {'recipient': 'b@example.com', 'subject': 'B'},  # missing body
+            ],
+            'schedule_type': 'immediate'
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        # Providing multiple modes
+        data = {
+            'recipient': 'a@example.com',
+            'emails': [
+                {'recipient': 'b@example.com', 'subject': 'B', 'body': 'Hello'},
+            ],
+            'subject': 'S',
+            'body': 'B',
+            'schedule_type': 'immediate'
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
