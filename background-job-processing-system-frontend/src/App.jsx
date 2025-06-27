@@ -3,6 +3,7 @@ import { Routes, Route, Link, Navigate } from "react-router-dom";
 import Dashboard from "./components/Dashboard";
 import EmailJobForm from "./components/EmailJobForm";
 import FileUploadForm from "./components/FileUploadForm";
+import JobDetails from "./components/JobDetails";
 
 function App() {
   return (
@@ -60,6 +61,7 @@ function App() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/send-email" element={<EmailJobForm />} />
         <Route path="/upload-file" element={<FileUploadForm />} />
+        <Route path="/jobs/:id" element={<JobDetails />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>

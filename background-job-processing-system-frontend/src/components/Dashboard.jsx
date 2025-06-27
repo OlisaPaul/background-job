@@ -5,6 +5,7 @@ import Card from "react-bootstrap/Card";
 import "bootstrap/dist/css/bootstrap.min.css";
 import JobStatsChart from "./JobStatsChart";
 import API_BASE from "../api/config";
+import { useNavigate } from "react-router-dom";
 
 // Dynamically determine WebSocket URL based on current location and fallback to 9000 if 8000 fails
 function getWebSocketUrl() {
@@ -25,6 +26,7 @@ function Dashboard() {
   const [previous, setPrevious] = useState(null);
   const [statsKey, setStatsKey] = useState(0); // For forcing JobStatsChart re-render
   const wsRef = useRef(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchJobs(page);
@@ -99,11 +101,11 @@ function Dashboard() {
   // Download file handler for file_upload jobs
   function handleDownload(job) {
     if (!job.file_url) return;
+    // Try direct download first, fallback to fetch if needed
     const link = document.createElement("a");
     link.href = job.file_url;
+    link.download = job.parameters?.file_name || "download";
     link.target = "_blank";
-    link.rel = "noopener noreferrer";
-    link.download = job.parameters?.file_name || "";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -147,7 +149,7 @@ function Dashboard() {
                     <th>SNO</th>
                     <th>Type</th>
                     <th>Status</th>
-                    <th>Scheduled Time</th>
+                    {/* <th>Scheduled Time</th> */}
                     <th>Action</th>
                     <th>Download</th>
                   </tr>
@@ -172,7 +174,12 @@ function Dashboard() {
                     const sno = (page - 1) * pageSize + idx + 1;
 
                     return (
-                      <tr key={job.id} className={rowClass}>
+                      <tr
+                        key={job.id}
+                        className={rowClass}
+                        style={{ cursor: "pointer" }}
+                        onClick={() => navigate(`/jobs/${job.id}`)}
+                      >
                         <td>{sno}</td>
                         <td>{humanizeJobType(job.job_type)}</td>
                         <td>{job.status}</td>
@@ -197,7 +204,7 @@ function Dashboard() {
                           </button>
                         </td>
                         <td>
-                          {job.job_type === "file_upload" ? (
+                           
                             <button
                               className="btn btn-success btn-sm"
                               onClick={() => handleDownload(job)}
@@ -205,11 +212,6 @@ function Dashboard() {
                             >
                               Download
                             </button>
-                          ) : (
-                            <button className="btn btn-success btn-sm" disabled>
-                              Download
-                            </button>
-                          )}
                         </td>
                       </tr>
                     );
