@@ -131,6 +131,7 @@ Your Redis server is too old. Upgrade to Redis 5.0 or higher (see above for Wind
   - Combine filters: `GET /api/jobs/?job_type=upload_file&status=failed`
 
 Example:
+
 ```http
 GET /api/jobs/?job_type=send_email&status=completed&page=1
 ```

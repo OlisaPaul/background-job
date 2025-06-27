@@ -43,10 +43,35 @@ function JobDetails() {
       .finally(() => setDeleting(false));
   }
 
+  // Download handler using the new endpoint and return to previous page
+  async function handleDownloadAndReturn() {
+    if (!job?.id) return;
+    try {
+      const res = await fetch(`${API_BASE}/jobs/${job.id}/download-url/`);
+      if (!res.ok) throw new Error("Failed to get download URL");
+      const data = await res.json();
+      if (!data.download_url) throw new Error("No download URL returned");
+      // Open in new tab
+      const win = window.open(data.download_url, "_blank");
+      // Return to previous page after a short delay
+      setTimeout(() => {
+        navigate(-1);
+      }, 1000); // 1 second delay to allow download to start
+    } catch (err) {
+      alert(err.message || "Failed to download file.");
+    }
+  }
+
   // Helper to humanize job type
   function humanizeJobType(type) {
     if (!type) return "-";
     return type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  // Helper to capitalize first letter
+  function capitalize(str) {
+    if (!str || typeof str !== "string") return "-";
+    return str.charAt(0).toUpperCase() + str.slice(1);
   }
 
   if (loading) return <div className="text-center mt-5">Loading...</div>;
@@ -101,7 +126,7 @@ function JobDetails() {
               <strong>Type:</strong> {humanizeJobType(job.job_type)}
             </div>
             <div className="mb-3">
-              <strong>Status:</strong> {job.status}
+              <strong>Status:</strong> {capitalize(job.status)}
             </div>
             <div className="mb-3">
               <strong>Created At:</strong>{" "}
@@ -118,10 +143,10 @@ function JobDetails() {
                 : "-"}
             </div>
             <div className="mb-3">
-              <strong>Schedule Type:</strong> {job.schedule_type}
+              <strong>Schedule Type:</strong> {capitalize(job.schedule_type)}
             </div>
             <div className="mb-3">
-              <strong>Priority:</strong> {job.priority}
+              <strong>Priority:</strong> {capitalize(job.priority)}
             </div>
             <div className="mb-3">
               <strong>Retries:</strong> {job.retries} / {job.max_retries}
@@ -129,13 +154,14 @@ function JobDetails() {
             {job.file_url && (
               <div className="mb-3">
                 <strong>File URL:</strong>{" "}
-                <a
-                  href={job.file_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <Button
+                  variant="success"
+                  size="sm"
+                  onClick={handleDownloadAndReturn}
+                  style={{ marginLeft: 8 }}
                 >
                   Download
-                </a>
+                </Button>
               </div>
             )}
             <Button

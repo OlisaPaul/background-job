@@ -4,6 +4,8 @@ import Dashboard from "./components/Dashboard";
 import EmailJobForm from "./components/EmailJobForm";
 import FileUploadForm from "./components/FileUploadForm";
 import JobDetails from "./components/JobDetails";
+// Add react-icons
+import { FaHome, FaEnvelope, FaUpload } from "react-icons/fa";
 
 function App() {
   return (
@@ -17,7 +19,7 @@ function App() {
           color: "#fff",
           padding: "1rem",
           borderBottom: "1px solid #1e40af",
-          marginBottom: "2rem",
+          marginBottom: "0.5rem",
           boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
         }}
       >
@@ -29,9 +31,12 @@ function App() {
             fontWeight: 600,
             textDecoration: "none",
             fontSize: 18,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 2,
           }}
         >
-          Dashboard
+          <FaHome style={{ marginRight: 2 }} /> Home
         </Link>
         <Link
           to="/send-email"
@@ -41,9 +46,12 @@ function App() {
             fontWeight: 600,
             textDecoration: "none",
             fontSize: 18,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 2,
           }}
         >
-          Send Email
+          <FaEnvelope style={{ marginRight: 2 }} /> Send Email
         </Link>
         <Link
           to="/upload-file"
@@ -52,9 +60,12 @@ function App() {
             fontWeight: 600,
             textDecoration: "none",
             fontSize: 18,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 2,
           }}
         >
-          Upload File
+          <FaUpload style={{ marginRight: 2 }} /> Upload File
         </Link>
       </nav>
       <Routes>

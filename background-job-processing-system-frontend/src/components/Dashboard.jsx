@@ -25,6 +25,8 @@ function Dashboard() {
   const [next, setNext] = useState(null);
   const [previous, setPrevious] = useState(null);
   const [statsKey, setStatsKey] = useState(0); // For forcing JobStatsChart re-render
+  const [jobTypeFilter, setJobTypeFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
   const wsRef = useRef(null);
   const navigate = useNavigate();
 
@@ -55,10 +57,13 @@ function Dashboard() {
     };
     return () => wsRef.current && wsRef.current.close();
     // eslint-disable-next-line
-  }, [page]);
+  }, [page, jobTypeFilter, statusFilter]);
 
   function fetchJobs(pageNum = 1) {
-    fetch(`${API_BASE}/jobs/?page=${pageNum}`)
+    let url = `${API_BASE}/jobs/?page=${pageNum}`;
+    if (jobTypeFilter) url += `&job_type=${jobTypeFilter}`;
+    if (statusFilter) url += `&status=${statusFilter}`;
+    fetch(url)
       .then((res) => res.json())
       .then((data) => {
         setJobs(data.results || []);
@@ -99,16 +104,23 @@ function Dashboard() {
   }
 
   // Download file handler for file_upload jobs
-  function handleDownload(job) {
-    if (!job.file_url) return;
-    // Try direct download first, fallback to fetch if needed
-    const link = document.createElement("a");
-    link.href = job.file_url;
-    link.download = job.parameters?.file_name || "download";
-    link.target = "_blank";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  async function handleDownload(job) {
+    if (!job.id) return;
+    try {
+      const res = await fetch(`${API_BASE}/jobs/${job.id}/download-url/`);
+      if (!res.ok) throw new Error("Failed to get download URL");
+      const data = await res.json();
+      if (!data.download_url) throw new Error("No download URL returned");
+      const link = document.createElement("a");
+      link.href = data.download_url;
+      link.download = job.parameters?.file_name || "download";
+      link.target = "_blank";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      alert(err.message || "Failed to download file.");
+    }
   }
 
   // Convert job_type to human-friendly string
@@ -124,6 +136,20 @@ function Dashboard() {
     }
   }
 
+  // Job type and status options
+  const jobTypeOptions = [
+    { value: "", label: "All Types" },
+    { value: "send_email", label: "Send Email" },
+    { value: "upload_file", label: "File Upload" },
+  ];
+  const statusOptions = [
+    { value: "", label: "All Statuses" },
+    { value: "pending", label: "Pending" },
+    { value: "running", label: "Running" },
+    { value: "completed", label: "Completed" },
+    { value: "failed", label: "Failed" },
+  ];
+
   return (
     <Container
       fluid
@@ -138,11 +164,41 @@ function Dashboard() {
     >
       <Card className="shadow-sm" style={{ border: "none" }}>
         <Card.Body>
-          <Card.Title as="h2" className="mb-4 text-center">
-            Job Dashboard
-          </Card.Title>
           <div className="row flex-column flex-md-row">
             <div className="col-12 col-md-8 pe-md-5 mb-4 mb-md-0">
+              {/* Filter controls */}
+              <div className="d-flex flex-wrap gap-3 mb-3 align-items-center">
+                <select
+                  className="form-select"
+                  style={{ maxWidth: 200 }}
+                  value={jobTypeFilter}
+                  onChange={(e) => {
+                    setJobTypeFilter(e.target.value);
+                    setPage(1);
+                  }}
+                >
+                  {jobTypeOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className="form-select"
+                  style={{ maxWidth: 200 }}
+                  value={statusFilter}
+                  onChange={(e) => {
+                    setStatusFilter(e.target.value);
+                    setPage(1);
+                  }}
+                >
+                  {statusOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <Table striped bordered hover responsive>
                 <thead>
                   <tr>
@@ -204,14 +260,13 @@ function Dashboard() {
                           </button>
                         </td>
                         <td>
-                           
-                            <button
-                              className="btn btn-success btn-sm"
-                              onClick={() => handleDownload(job)}
-                              disabled={!job.file_url}
-                            >
-                              Download
-                            </button>
+                          <button
+                            className="btn btn-success btn-sm"
+                            onClick={() => handleDownload(job)}
+                            disabled={!job.file_url}
+                          >
+                            Download
+                          </button>
                         </td>
                       </tr>
                     );
