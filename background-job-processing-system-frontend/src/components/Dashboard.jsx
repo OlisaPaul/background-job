@@ -95,6 +95,19 @@ function Dashboard() {
       .catch(() => alert("Failed to retry job."));
   }
 
+  // Download file handler for file_upload jobs
+  function handleDownload(job) {
+    if (!job.file_url) return;
+    const link = document.createElement("a");
+    link.href = job.file_url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.download = job.parameters?.file_name || "";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
   // Convert job_type to human-friendly string
   function humanizeJobType(type) {
     switch (type) {
@@ -111,8 +124,14 @@ function Dashboard() {
   return (
     <Container
       fluid
-      className="mt-4"
-      style={{ minHeight: "90vh", maxWidth: "100vw", padding: 0 }}
+      className="app-main-bg mt-4"
+      style={{
+        minHeight: "90vh",
+        width: "100vw",
+        maxWidth: "100vw",
+        padding: 0,
+        overflowX: "hidden",
+      }}
     >
       <Card className="shadow-sm" style={{ border: "none" }}>
         <Card.Body>
@@ -129,6 +148,7 @@ function Dashboard() {
                     <th>Status</th>
                     <th>Scheduled Time</th>
                     <th>Action</th>
+                    <th>Download</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -174,6 +194,21 @@ function Dashboard() {
                           >
                             Retry
                           </button>
+                        </td>
+                        <td>
+                          {job.job_type === "file_upload" ? (
+                            <button
+                              className="btn btn-success btn-sm"
+                              onClick={() => handleDownload(job)}
+                              disabled={!job.file_url}
+                            >
+                              Download
+                            </button>
+                          ) : (
+                            <button className="btn btn-success btn-sm" disabled>
+                              Download
+                            </button>
+                          )}
                         </td>
                       </tr>
                     );

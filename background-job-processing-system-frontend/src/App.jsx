@@ -9,18 +9,52 @@ function App() {
     <>
       <nav
         style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 1000,
+          background: "#2563eb",
+          color: "#fff",
           padding: "1rem",
-          borderBottom: "1px solid #eee",
+          borderBottom: "1px solid #1e40af",
           marginBottom: "2rem",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
         }}
       >
-        <Link to="/" style={{ marginRight: 16 }}>
+        <Link
+          to="/"
+          style={{
+            marginRight: 20,
+            color: "#fff",
+            fontWeight: 600,
+            textDecoration: "none",
+            fontSize: 18,
+          }}
+        >
           Dashboard
         </Link>
-        <Link to="/send-email" style={{ marginRight: 16 }}>
+        <Link
+          to="/send-email"
+          style={{
+            marginRight: 20,
+            color: "#fff",
+            fontWeight: 600,
+            textDecoration: "none",
+            fontSize: 18,
+          }}
+        >
           Send Email
         </Link>
-        <Link to="/upload-file">Upload File</Link>
+        <Link
+          to="/upload-file"
+          style={{
+            color: "#fff",
+            fontWeight: 600,
+            textDecoration: "none",
+            fontSize: 18,
+          }}
+        >
+          Upload File
+        </Link>
       </nav>
       <Routes>
         <Route path="/" element={<Dashboard />} />
