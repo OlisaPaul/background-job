@@ -23,6 +23,7 @@ function Dashboard() {
   const [page, setPage] = useState(1);
   const [next, setNext] = useState(null);
   const [previous, setPrevious] = useState(null);
+  const [statsKey, setStatsKey] = useState(0); // For forcing JobStatsChart re-render
   const wsRef = useRef(null);
 
   useEffect(() => {
@@ -40,7 +41,6 @@ function Dashboard() {
     wsRef.current.onmessage = (event) => {
       if (event.data) {
         const msg = JSON.parse(event.data);
-        console.log(JSON.parse(msg.id));
         setJobs((prevJobs) =>
           prevJobs.map((job) =>
             job.id === msg.id
@@ -48,6 +48,7 @@ function Dashboard() {
               : job
           )
         );
+        setStatsKey((k) => k + 1); // Force JobStatsChart to re-render/fetch
       }
     };
     return () => wsRef.current && wsRef.current.close();
@@ -237,7 +238,7 @@ function Dashboard() {
               </div>
             </div>
             <div className="col-12 col-md-4 d-flex align-items-center justify-content-center justify-content-md-end ps-md-5">
-              <JobStatsChart />
+              <JobStatsChart key={statsKey} />
             </div>
           </div>
         </Card.Body>
