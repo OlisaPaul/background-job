@@ -6,6 +6,7 @@ from jobs.models import Job
 from unittest.mock import patch
 from django.core.files.uploadedfile import SimpleUploadedFile
 import os
+from django_celery_beat.models import PeriodicTask
 
 class JobIntegrationTests(APITestCase):
     @patch('jobs.tasks.execute_job_task.delay')
@@ -162,3 +163,67 @@ class JobIntegrationTests(APITestCase):
         self.assertEqual(mock_celery_delay.call_count, 2)
         called_ids = {call.args[0] for call in mock_celery_delay.call_args_list}
         self.assertEqual(set(jobs.values_list('id', flat=True)), called_ids)
+
+    def test_deleting_scheduled_job_removes_periodic_task(self):
+        """Deleting a scheduled job also deletes its associated PeriodicTask."""
+        url = reverse('job-list')
+        future_time = (timezone.now() + timezone.timedelta(hours=1)).isoformat()
+        data = {
+            'job_type': 'send_email',
+            'parameters': {
+                'subject': 'Scheduled',
+                'body': 'Should be scheduled',
+                'recipient': 'future@example.com'
+            },
+            'schedule_type': 'scheduled',
+            'scheduled_time': future_time
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        job_id = response.data['id']
+        # Simulate periodic task creation (if not auto-created)
+        job = Job.objects.get(id=job_id)
+        from jobs.views import JobViewSet
+        viewset = JobViewSet()
+        viewset.create_periodic_task(job)
+        # Check that the periodic task exists
+        self.assertTrue(PeriodicTask.objects.filter(name=f'job-{job_id}').exists())
+        # Delete the job
+        del_url = reverse('job-detail', args=[job_id])
+        del_response = self.client.delete(del_url)
+        self.assertEqual(del_response.status_code, status.HTTP_204_NO_CONTENT)
+        # Check that the periodic task is deleted
+        self.assertFalse(PeriodicTask.objects.filter(name=f'job-{job_id}').exists())
+
+    def test_deleting_periodic_job_removes_all_related_tasks(self):
+        """Deleting a periodic job removes all related PeriodicTasks (including enable-job-*)."""
+        url = reverse('job-list')
+        future_time = (timezone.now() + timezone.timedelta(hours=1)).isoformat()
+        data = {
+            'job_type': 'send_email',
+            'parameters': {
+                'subject': 'Periodic',
+                'body': 'Should be periodic',
+                'recipient': 'periodic@example.com'
+            },
+            'schedule_type': 'scheduled',
+            'scheduled_time': future_time,
+            'frequency': 'daily'
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        job_id = response.data['id']
+        job = Job.objects.get(id=job_id)
+        from jobs.views import JobViewSet
+        viewset = JobViewSet()
+        viewset.create_periodic_task(job)
+        # Check both periodic and enable tasks exist
+        self.assertTrue(PeriodicTask.objects.filter(name=f'job-{job_id}').exists())
+        self.assertTrue(PeriodicTask.objects.filter(name=f'enable-job-{job_id}').exists())
+        # Delete the job
+        del_url = reverse('job-detail', args=[job_id])
+        del_response = self.client.delete(del_url)
+        self.assertEqual(del_response.status_code, status.HTTP_204_NO_CONTENT)
+        # Both tasks should be deleted
+        self.assertFalse(PeriodicTask.objects.filter(name=f'job-{job_id}').exists())
+        self.assertFalse(PeriodicTask.objects.filter(name=f'enable-job-{job_id}').exists())

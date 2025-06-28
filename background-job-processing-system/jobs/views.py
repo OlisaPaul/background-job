@@ -198,6 +198,14 @@ class JobViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    def perform_destroy(self, instance):
+        """Ensure that deleting a job also deletes any scheduled/periodic tasks so the job will never run."""
+        # Remove any periodic or clocked tasks associated with this job
+        from django_celery_beat.models import PeriodicTask
+        PeriodicTask.objects.filter(name=f'job-{instance.id}').delete()
+        PeriodicTask.objects.filter(name=f'enable-job-{instance.id}').delete()
+        super().perform_destroy(instance)
+
 # --- WebSocket Test View ---
 class TestWebSocketView(TemplateView):
     """Simple template for testing WebSocket permissions."""

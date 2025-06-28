@@ -352,38 +352,38 @@ All sensitive settings are loaded from a `.env` file. See `.env.example` for req
 
 ## Running Tests
 
-Unit tests are provided for all major job scheduling and file upload features. To run the tests:
+Unit and integration tests are provided for all major job scheduling, file upload, and periodic task cleanup features.
 
-```bash
+To run all tests (unit and integration):
+
+```powershell
 python manage.py test jobs
 ```
 
-The tests cover:
+- This will run all tests in `jobs/test_jobs.py`, `jobs/test_integration.py`, and `jobs/tests.py`.
+- **Do not use `pytest` directly**; always use Django's test runner to ensure settings are loaded correctly.
+
+### What is Covered
 
 - Immediate and scheduled job creation (email and file upload)
 - Validation for required and future `scheduled_time`
 - File size validation for uploads
+- **Deleting a job also deletes any associated scheduled/periodic tasks, ensuring the job will never run in the future**
+- Filtering, pagination, and API validation
 
-Test file location: `jobs/test_jobs.py`, `jobs/test_integration.py`
+### Integration Tests
 
-## Integration Tests
-
-Integration tests are provided to verify the end-to-end behavior of job creation, file uploads, and Celery task triggering. These tests use Django's test client and mock Celery tasks to ensure correct system integration without running real background jobs.
-
-To run all tests (unit and integration):
-
-```bash
-python manage.py test jobs
-```
-
-Integration test file location: `jobs/test_integration.py`
-
-The integration tests cover:
-
+Integration tests verify end-to-end behavior, including:
 - Creating jobs via the API and verifying database persistence
 - Immediate job creation triggers Celery (mocked)
 - Immediate file upload creates both the file and the job, and triggers Celery (mocked)
 - Scheduled jobs do not trigger Celery immediately
+- **Deleting a scheduled or periodic job removes all related Celery Beat tasks**
+
+Test file locations:
+- `jobs/test_jobs.py` (unit tests)
+- `jobs/test_integration.py` (integration tests)
+- `jobs/tests.py` (additional tests)
 
 ## Dependencies
 
