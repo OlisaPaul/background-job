@@ -15,9 +15,39 @@ def execute_job_task(self, job_id):
     Celery task to execute a background job by ID.
     Handles email, file upload, and generic jobs. Updates job status and notifies WebSocket clients.
     """
-    job = Job.objects.get(id=job_id)
+    try:
+        job = Job.objects.get(id=job_id)
+    except Job.DoesNotExist:
+        # Job was deleted before execution; send websocket update and exit
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            'job_status',
+            {
+                'type': 'job_status_update',
+                'data': {
+                    'id': job_id,
+                    'status': 'deleted',
+                    'result': {'error': 'Job was deleted before execution.'},
+                }
+            }
+        )
+        print(f"WebSocket update sent for deleted job {job_id}")
+        return
     job.status = 'running'
     job.save()
+    # Send websocket update for running status
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        'job_status',
+        {
+            'type': 'job_status_update',
+            'data': {
+                'id': job.id,
+                'status': job.status,
+                'result': job.result,
+            }
+        }
+    )
     try:
         result = None
         if job.job_type == 'send_email':
@@ -62,7 +92,6 @@ def execute_job_task(self, job_id):
         job.status = JOB_STATUS_COMPLETED
         job.result = result
         # Notify websocket clients
-        channel_layer = get_channel_layer()
         async_to_sync(channel_layer.group_send)(
             'job_status',
             {
