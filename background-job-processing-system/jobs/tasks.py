@@ -1,11 +1,9 @@
 from celery import shared_task
-from .models import Job
+from .models import Job, JOB_STATUS_FAILED, JOB_STATUS_PENDING, JOB_STATUS_COMPLETED
 import time
 from django.core.mail import send_mail
 from django.conf import settings
 import boto3
-from botocore.exceptions import BotoCoreError, ClientError
-import base64
 import os
 from django_celery_beat.models import PeriodicTask
 from asgiref.sync import async_to_sync
@@ -13,6 +11,10 @@ from channels.layers import get_channel_layer
 
 @shared_task(bind=True, max_retries=3)
 def execute_job_task(self, job_id):
+    """
+    Celery task to execute a background job by ID.
+    Handles email, file upload, and generic jobs. Updates job status and notifies WebSocket clients.
+    """
     job = Job.objects.get(id=job_id)
     job.status = 'running'
     job.save()
@@ -27,20 +29,20 @@ def execute_job_task(self, job_id):
                 recipient_list=[params.get('recipient')],
                 fail_silently=False,
             )
-            result = {'message': f"Email sent to {params.get('recipient')}"}
+            result = {'message': f"Email sent to {params.get('recipient')}", 'recipient': params.get('recipient')}
         elif job.job_type == 'upload_file':
             params = job.parameters
             s3 = boto3.client(
                 's3',
                 aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
                 aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
-                region_name=os.getenv('AWS_REGION')
+                region_name=os.getenv('AWS_REGION', 'us-east-1')
             )
             temp_path = params['temp_path']
             file_name = params['file_name']
             bucket = os.getenv('AWS_STORAGE_BUCKET_NAME')
             if not os.path.exists(temp_path):
-                job.status = 'failed'
+                job.status = JOB_STATUS_FAILED
                 job.result = {'error': f"File {file_name} not found at {temp_path}. It may have been deleted before the scheduled job ran."}
                 job.save()
                 return
@@ -52,13 +54,12 @@ def execute_job_task(self, job_id):
                 'message': f"File {file_name} uploaded to S3.",
                 'file_url': file_url
             }
-            # Remove the temp file after upload
             os.remove(temp_path)
         else:
             # Simulate other job processing
             time.sleep(2)
             result = {'message': f"{job.job_type} completed successfully."}
-        job.status = 'completed'
+        job.status = JOB_STATUS_COMPLETED
         job.result = result
         # Notify websocket clients
         channel_layer = get_channel_layer()
@@ -75,7 +76,7 @@ def execute_job_task(self, job_id):
         )
         print(f"WebSocket update sent for job {job.id} with status {job.status}")
     except Exception as exc:
-        job.status = 'failed'
+        job.status = JOB_STATUS_FAILED
         job.retries += 1
         job.save()
         raise self.retry(exc=exc, countdown=2 ** job.retries)
@@ -83,6 +84,9 @@ def execute_job_task(self, job_id):
 
 @shared_task
 def enable_periodic_task(periodic_task_id):
+    """
+    Celery task to enable a periodic task by ID (used for scheduled jobs).
+    """
     try:
         pt = PeriodicTask.objects.get(id=periodic_task_id)
         pt.enabled = True

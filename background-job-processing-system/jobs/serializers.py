@@ -1,27 +1,24 @@
 from rest_framework import serializers
 from .models import Job
 import os
+from typing import Any, Dict
 
-class JobSerializer(serializers.ModelSerializer):
-    file_url = serializers.SerializerMethodField()
-    schedule_type = serializers.ChoiceField(choices=[
-        ('immediate', 'Immediate'),
-        ('interval', 'Interval'),
-        ('scheduled', 'Scheduled')
-    ], default='immediate', required=False)
-    scheduled_time = serializers.DateTimeField(required=False, allow_null=True)
-    frequency = serializers.ChoiceField(choices=[
-        ('daily', 'Daily'),
-        ('weekly', 'Weekly'),
-        ('monthly', 'Monthly'),
-        ('hourly', 'Hourly')
-    ], default='daily', required=False, allow_blank=True)
+# --- Constants for Choices ---
+SCHEDULE_TYPE_CHOICES = [
+    ('immediate', 'Immediate'),
+    ('interval', 'Interval'),
+    ('scheduled', 'Scheduled'),
+]
+FREQUENCY_CHOICES = [
+    ('daily', 'Daily'),
+    ('weekly', 'Weekly'),
+    ('monthly', 'Monthly'),
+    ('hourly', 'Hourly'),
+]
 
-    class Meta:
-        model = Job
-        fields = '__all__'
-    
-    def validate(self, data):
+# --- Shared Mixin for Schedule Validation ---
+class ScheduleValidationMixin:
+    def validate_schedule(self, data: Dict[str, Any]) -> Dict[str, Any]:
         schedule_type = data.get('schedule_type', 'immediate')
         scheduled_time = data.get('scheduled_time', None)
         if schedule_type == 'immediate' and scheduled_time:
@@ -34,33 +31,37 @@ class JobSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError('scheduled_time must be in the future.')
         return data
 
+# --- Job Serializer ---
+class JobSerializer(serializers.ModelSerializer, ScheduleValidationMixin):
+    """Serializer for the Job model, including file URL and schedule validation."""
+    file_url = serializers.SerializerMethodField()
+    schedule_type = serializers.ChoiceField(choices=SCHEDULE_TYPE_CHOICES, default='immediate', required=False)
+    scheduled_time = serializers.DateTimeField(required=False, allow_null=True)
+    frequency = serializers.ChoiceField(choices=FREQUENCY_CHOICES, default='daily', required=False, allow_blank=True)
 
-    def get_file_url(self, obj):
+    class Meta:
+        model = Job
+        fields = '__all__'
+
+    def validate(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        return self.validate_schedule(data)
+
+    def get_file_url(self, obj: Job) -> str:
         if obj.job_type == 'upload_file' and obj.result and isinstance(obj.result, dict):
             return obj.result.get('file_url')
         return None
 
-class FileUploadJobSerializer(serializers.Serializer):
+# --- File Upload Serializer ---
+class FileUploadJobSerializer(serializers.Serializer, ScheduleValidationMixin):
+    """Serializer for file upload jobs."""
     file = serializers.FileField()
     priority = serializers.IntegerField(default=5)
     max_retries = serializers.IntegerField(default=3)
-    schedule_type = serializers.ChoiceField(choices=[
-        ('immediate', 'Immediate'),
-        ('scheduled', 'Scheduled'),
-    ], default='immediate', required=False)
+    schedule_type = serializers.ChoiceField(choices=[('immediate', 'Immediate'), ('scheduled', 'Scheduled')], default='immediate', required=False)
     scheduled_time = serializers.DateTimeField(required=False, allow_null=True)
 
-    def validate(self, data):
-        schedule_type = data.get('schedule_type', 'immediate')
-        scheduled_time = data.get('scheduled_time', None)
-        if schedule_type == 'immediate' and scheduled_time:
-            raise serializers.ValidationError('scheduled_time must not be set for immediate jobs.')
-        if schedule_type == 'scheduled':
-            if not scheduled_time:
-                raise serializers.ValidationError('scheduled_time is required for scheduled jobs.')
-            from django.utils import timezone
-            if scheduled_time <= timezone.now():
-                raise serializers.ValidationError('scheduled_time must be in the future.')
+    def validate(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        data = self.validate_schedule(data)
         return data
 
     def validate_file(self, value):
@@ -69,10 +70,9 @@ class FileUploadJobSerializer(serializers.Serializer):
             raise serializers.ValidationError('File size must not exceed 10 MB.')
         return value
 
-    def create(self, validated_data):
+    def create(self, validated_data: Dict[str, Any]) -> Job:
         file = validated_data['file']
         file_name = file.name
-        # Save file temporarily to disk (media/uploads/)
         temp_dir = 'media/uploads/'
         os.makedirs(temp_dir, exist_ok=True)
         temp_path = os.path.join(temp_dir, file_name)
@@ -92,34 +92,29 @@ class FileUploadJobSerializer(serializers.Serializer):
         )
         return job
 
+# --- Email Message Serializer ---
 class EmailMessageSerializer(serializers.Serializer):
+    """Serializer for a single personalized email message."""
     recipient = serializers.EmailField()
     subject = serializers.CharField()
     body = serializers.CharField()
 
-class SendEmailJobSerializer(serializers.Serializer):
+# --- Send Email Job Serializer ---
+class SendEmailJobSerializer(serializers.Serializer, ScheduleValidationMixin):
+    """Serializer for sending single, bulk, or personalized email jobs."""
     recipient = serializers.EmailField(required=False)
-    recipients = serializers.ListField(
-        child=serializers.EmailField(), required=False, allow_empty=False
-    )
+    recipients = serializers.ListField(child=serializers.EmailField(), required=False, allow_empty=False)
     emails = EmailMessageSerializer(many=True, required=False)
     subject = serializers.CharField(required=False)
     body = serializers.CharField(required=False)
     priority = serializers.IntegerField(default=5)
     max_retries = serializers.IntegerField(default=3)
-    schedule_type = serializers.ChoiceField(choices=[
-        ('immediate', 'Immediate'),
-        ('scheduled', 'Scheduled'),
-    ], default='immediate', required=False)
+    schedule_type = serializers.ChoiceField(choices=[('immediate', 'Immediate'), ('scheduled', 'Scheduled')], default='immediate', required=False)
     scheduled_time = serializers.DateTimeField(required=False, allow_null=True)
-    frequency = serializers.ChoiceField(choices=[
-        ('daily', 'Daily'),
-        ('weekly', 'Weekly'),
-        ('monthly', 'Monthly'),
-        ('hourly', 'Hourly')
-    ], default='daily', required=False, allow_blank=True)
+    frequency = serializers.ChoiceField(choices=FREQUENCY_CHOICES, default='daily', required=False, allow_blank=True)
 
-    def validate(self, data):
+    def validate(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        data = self.validate_schedule(data)
         recipients = data.get('recipients')
         recipient = data.get('recipient')
         emails = data.get('emails')
@@ -131,23 +126,12 @@ class SendEmailJobSerializer(serializers.Serializer):
         if has_emails:
             if not isinstance(emails, list) or not emails:
                 raise serializers.ValidationError('emails must be a non-empty list.')
-            # Each item validated by nested serializer
         else:
             if not data.get('subject') or not data.get('body'):
                 raise serializers.ValidationError('subject and body are required for single or bulk email.')
-        schedule_type = data.get('schedule_type', 'immediate')
-        scheduled_time = data.get('scheduled_time', None)
-        if schedule_type == 'immediate' and scheduled_time:
-            raise serializers.ValidationError('scheduled_time must not be set for immediate jobs.')
-        if schedule_type == 'scheduled':
-            if not scheduled_time:
-                raise serializers.ValidationError('scheduled_time is required for scheduled jobs.')
-            from django.utils import timezone
-            if scheduled_time <= timezone.now():
-                raise serializers.ValidationError('scheduled_time must be in the future.')
         return data
 
-    def create(self, validated_data):
+    def create(self, validated_data: Dict[str, Any]) -> Any:
         jobs = []
         if validated_data.get('emails'):
             for email_obj in validated_data['emails']:
