@@ -94,16 +94,19 @@ class JobIntegrationTests(APITestCase):
         # First page
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data['results']), 10)
+        self.assertEqual(len(response.data['results']), 5)
         self.assertEqual(response.data['count'], 23)
         # Third page
         response = self.client.get(url + '?page=3')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data['results']), 3)
-        # Out-of-range page
+        self.assertEqual(len(response.data['results']), 5)
+        # Fifth page
         response = self.client.get(url + '?page=5')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['results'], [])
+        self.assertEqual(len(response.data['results']), 3)
+        # Out-of-range page
+        response = self.client.get(url + '?page=6')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     @patch('jobs.tasks.execute_job_task.delay')
     def test_immediate_email_job_triggers_celery_via_dedicated_endpoint(self, mock_celery_delay):

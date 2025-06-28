@@ -127,7 +127,7 @@ class JobApiTests(APITestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('results', response.data)
-        self.assertEqual(len(response.data['results']), 10)
+        self.assertEqual(len(response.data['results']), 5)
         self.assertEqual(response.data['count'], 15)
         self.assertIsNotNone(response.data['next'])
         self.assertIsNone(response.data['previous'])
@@ -150,8 +150,8 @@ class JobApiTests(APITestCase):
     def test_job_list_pagination_invalid_page(self):
         url = reverse('job-list')
         response = self.client.get(url + '?page=999')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['results'], [])
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        # self.assertEqual(response.data['results'], [])  # Not needed, 404 means no results
 
     def test_job_list_pagination_non_integer_page(self):
         url = reverse('job-list')
