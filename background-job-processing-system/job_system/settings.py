@@ -90,11 +90,18 @@ ASGI_APPLICATION = 'job_system.asgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'jobs',
+        'HOST': os.getenv('MYSQL_HOST'),
+        'USER': os.getenv('MYSQL_USER'),
+        'PASSWORD': os.getenv('PASSWORD')
     }
 }
+DATABASE_URL = os.getenv('DATABASE_URL')
+WORK_ENV = os.getenv('WORK_ENV')
 
+if WORK_ENV != 'develop':
+    DATABASES['default'] = dj_database_url.parse(DATABASE_URL)
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
