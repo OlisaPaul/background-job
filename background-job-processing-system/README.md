@@ -374,6 +374,7 @@ python manage.py test jobs
 ### Integration Tests
 
 Integration tests verify end-to-end behavior, including:
+
 - Creating jobs via the API and verifying database persistence
 - Immediate job creation triggers Celery (mocked)
 - Immediate file upload creates both the file and the job, and triggers Celery (mocked)
@@ -381,6 +382,7 @@ Integration tests verify end-to-end behavior, including:
 - **Deleting a scheduled or periodic job removes all related Celery Beat tasks**
 
 Test file locations:
+
 - `jobs/test_jobs.py` (unit tests)
 - `jobs/test_integration.py` (integration tests)
 - `jobs/tests.py` (additional tests)

@@ -17,6 +17,7 @@ JOB_TYPE_CHOICES = [
 SCHEDULE_TYPE_CHOICES = [
     ('immediate', 'Immediate'),
     ('scheduled', 'Scheduled'),
+    ('interval', 'Interval'),
 ]
 
 FREQUENCY_CHOICES = [

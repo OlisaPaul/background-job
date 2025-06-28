@@ -6,6 +6,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import JobStatsChart from "./JobStatsChart";
 import API_BASE from "../api/config";
 import { useNavigate } from "react-router-dom";
+import { FaTrash, FaRedo, FaEdit, FaDownload } from "react-icons/fa";
 
 // Dynamically determine WebSocket URL based on current location and fallback to 9000 if 8000 fails
 function getWebSocketUrl() {
@@ -232,58 +233,74 @@ function Dashboard() {
 
                     return (
                       <tr
-                      key={job.id}
-                      className={rowClass}
-                      style={{ cursor: "pointer" }}
-                      onClick={() => navigate(`/jobs/${job.id}`)}
+                        key={job.id}
+                        className={rowClass}
+                        style={{ cursor: "pointer" }}
+                        onClick={() => navigate(`/jobs/${job.id}`)}
                       >
-                      <td>{sno}</td>
-                      <td>
-                        {humanizeJobType(job.job_type).charAt(0).toUpperCase() +
-                        humanizeJobType(job.job_type).slice(1)}
-                      </td>
-                      <td>
-                        {job.status.charAt(0).toUpperCase() + job.status.slice(1)}
-                      </td>
-                      <td>
-                        {job.schedule_type
-                        ? job.schedule_type.charAt(0).toUpperCase() +
-                          job.schedule_type.slice(1)
-                        : ""}
-                      </td>
-                      <td>
-                        <button
-                        className="btn btn-danger btn-sm me-2"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(job.id);
-                        }}
-                        >
-                        Delete
-                        </button>
-                        <button
-                        className="btn btn-secondary btn-sm"
-                        disabled={job.status !== "failed"}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRetry(job.id);
-                        }}
-                        >
-                        Retry
-                        </button>
-                      </td>
-                      <td>
-                        <button
-                        className="btn btn-success btn-sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDownload(job);
-                        }}
-                        disabled={!job.file_url}
-                        >
-                        Download
-                        </button>
-                      </td>
+                        <td>{sno}</td>
+                        <td>
+                          {humanizeJobType(job.job_type)
+                            .charAt(0)
+                            .toUpperCase() +
+                            humanizeJobType(job.job_type).slice(1)}
+                        </td>
+                        <td>
+                          {job.status.charAt(0).toUpperCase() +
+                            job.status.slice(1)}
+                        </td>
+                        <td>
+                          {job.schedule_type
+                            ? job.schedule_type.charAt(0).toUpperCase() +
+                              job.schedule_type.slice(1)
+                            : ""}
+                        </td>
+                        <td className="text-center align-middle">
+                          <button
+                            className="btn btn-primary btn-sm me-2 d-inline-flex align-items-center justify-content-center"
+                            title="Edit"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/jobs/${job.id}/edit`);
+                            }}
+                          >
+                            <FaEdit />
+                          </button>
+                          <button
+                            className="btn btn-secondary btn-sm me-2 d-inline-flex align-items-center justify-content-center"
+                            title="Retry"
+                            disabled={job.status !== "failed"}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRetry(job.id);
+                            }}
+                          >
+                            <FaRedo />
+                          </button>
+                          <button
+                            className="btn btn-danger btn-sm d-inline-flex align-items-center justify-content-center"
+                            title="Delete"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(job.id);
+                            }}
+                          >
+                            <FaTrash />
+                          </button>
+                        </td>
+                        <td className="text-center align-middle">
+                          <button
+                            className="btn btn-success btn-sm d-inline-flex align-items-center justify-content-center"
+                            title="Download"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDownload(job);
+                            }}
+                            disabled={!job.file_url}
+                          >
+                            <FaDownload />
+                          </button>
+                        </td>
                       </tr>
                     );
                   })}

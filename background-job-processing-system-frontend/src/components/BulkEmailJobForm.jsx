@@ -12,9 +12,7 @@ const frequencyOptions = [
 ];
 
 function BulkEmailJobForm() {
-  const [emails, setEmails] = useState([
-    { recipient: "", name: "" },
-  ]);
+  const [emails, setEmails] = useState([{ recipient: "", name: "" }]);
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [scheduleType, setScheduleType] = useState("immediate");
@@ -102,35 +100,50 @@ function BulkEmailJobForm() {
           <div className="form-group">
             <label>
               Body
-              <span style={{ fontWeight: 400, fontSize: 13, color: '#555', marginLeft: 8 }}>
-                (for personalization, click <button
+              <span
+                style={{
+                  fontWeight: 400,
+                  fontSize: 13,
+                  color: "#555",
+                  marginLeft: 8,
+                }}
+              >
+                (for personalization, click{" "}
+                <button
                   type="button"
                   style={{
-                    border: 'none',
-                    background: 'none',
-                    color: '#2563eb',
-                    textDecoration: 'underline',
-                    cursor: 'pointer',
-                    fontFamily: 'monospace',
+                    border: "none",
+                    background: "none",
+                    color: "#2563eb",
+                    textDecoration: "underline",
+                    cursor: "pointer",
+                    fontFamily: "monospace",
                     fontSize: 13,
                     padding: 0,
                   }}
                   onClick={() => {
-                    const textarea = document.getElementById("bulk-body-textarea");
+                    const textarea =
+                      document.getElementById("bulk-body-textarea");
                     if (!textarea) return;
                     const start = textarea.selectionStart;
                     const end = textarea.selectionEnd;
                     const value = body;
                     const insert = "{{name}}";
-                    const newValue = value.slice(0, start) + insert + value.slice(end);
+                    const newValue =
+                      value.slice(0, start) + insert + value.slice(end);
                     setBody(newValue);
                     setTimeout(() => {
                       textarea.focus();
-                      textarea.selectionStart = textarea.selectionEnd = start + insert.length;
+                      textarea.selectionStart = textarea.selectionEnd =
+                        start + insert.length;
                     }, 0);
                   }}
-                >{'{{name}}'}</button> to insert the recipient's name)
-              </span>:
+                >
+                  {"{{name}}"}
+                </button>{" "}
+                to insert the recipient's name)
+              </span>
+              :
             </label>
             <br />
             <textarea
@@ -150,7 +163,9 @@ function BulkEmailJobForm() {
                   type="email"
                   placeholder="Recipient Email"
                   value={e.recipient}
-                  onChange={(ev) => handleEmailChange(idx, "recipient", ev.target.value)}
+                  onChange={(ev) =>
+                    handleEmailChange(idx, "recipient", ev.target.value)
+                  }
                   required
                   className="form-control"
                   style={{ maxWidth: 220 }}
@@ -159,18 +174,28 @@ function BulkEmailJobForm() {
                   type="text"
                   placeholder="Name (for {{name}})"
                   value={e.name}
-                  onChange={(ev) => handleEmailChange(idx, "name", ev.target.value)}
+                  onChange={(ev) =>
+                    handleEmailChange(idx, "name", ev.target.value)
+                  }
                   className="form-control"
                   style={{ maxWidth: 160 }}
                 />
                 {emails.length > 1 && (
-                  <button type="button" className="btn btn-danger btn-sm" onClick={() => removeEmail(idx)}>
+                  <button
+                    type="button"
+                    className="btn btn-danger btn-sm"
+                    onClick={() => removeEmail(idx)}
+                  >
                     Remove
                   </button>
                 )}
               </div>
             ))}
-            <button type="button" className="btn btn-secondary btn-sm mt-2" onClick={addEmail}>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm mt-2"
+              onClick={addEmail}
+            >
               Add Recipient
             </button>
           </div>
@@ -179,7 +204,10 @@ function BulkEmailJobForm() {
             <br />
             <select
               value={scheduleType}
-              onChange={(e) => { setScheduleType(e.target.value); setFrequency(""); }}
+              onChange={(e) => {
+                setScheduleType(e.target.value);
+                setFrequency("");
+              }}
               className="form-control"
             >
               <option value="immediate">Immediate</option>
@@ -212,7 +240,9 @@ function BulkEmailJobForm() {
                   className="form-control"
                 >
                   {frequencyOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
                   ))}
                 </select>
               </div>

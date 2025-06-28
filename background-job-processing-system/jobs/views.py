@@ -76,6 +76,7 @@ class JobViewSet(viewsets.ModelViewSet):
             schedule_map = {
                 'hourly': dict(minute=minute, hour='*', day_of_month='*', month_of_year='*', day_of_week='*'),
                 'daily': dict(minute=minute, hour=hour, day_of_month='*', month_of_year='*', day_of_week='*'),
+                'weekly': dict(minute=minute, hour=hour, day_of_month='*', month_of_year='*', day_of_week=str(start.weekday())),
                 'monthly': dict(minute=minute, hour=hour, day_of_month=day, month_of_year='*', day_of_week='*'),
                 'yearly': dict(minute=minute, hour=hour, day_of_month=day, month_of_year=month, day_of_week='*'),
             }
@@ -205,6 +206,34 @@ class JobViewSet(viewsets.ModelViewSet):
         PeriodicTask.objects.filter(name=f'job-{instance.id}').delete()
         PeriodicTask.objects.filter(name=f'enable-job-{instance.id}').delete()
         super().perform_destroy(instance)
+
+    def update(self, request, *args, **kwargs):
+        """Allow updating only scheduled_time, frequency, and schedule_type for pending jobs with schedule_type 'interval' or 'scheduled'."""
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        schedule_type_val = (instance.schedule_type or '').lower()
+        print(f"[DEBUG] Job update: id={instance.id}, status={instance.status}, schedule_type={instance.schedule_type}")
+        if instance.status != 'pending' or schedule_type_val not in ['interval', 'scheduled']:
+            print(f"[DEBUG] Update blocked: status={instance.status}, schedule_type={instance.schedule_type}")
+            return Response({'error': f'Only pending jobs with schedule_type interval or scheduled can be updated. (status={instance.status}, schedule_type={instance.schedule_type})'}, status=status.HTTP_400_BAD_REQUEST)
+        allowed_fields = {'scheduled_time', 'frequency', 'schedule_type'}
+        data = {k: v for k, v in request.data.items() if k in allowed_fields}
+        serializer = self.get_serializer(instance, data=data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        old_scheduled_time = instance.scheduled_time
+        old_frequency = instance.frequency
+        old_schedule_type = instance.schedule_type
+        self.perform_update(serializer)
+        if (
+            old_scheduled_time != serializer.instance.scheduled_time or
+            old_frequency != serializer.instance.frequency or
+            old_schedule_type != serializer.instance.schedule_type
+        ):
+            from django_celery_beat.models import PeriodicTask
+            PeriodicTask.objects.filter(name=f'job-{instance.id}').delete()
+            PeriodicTask.objects.filter(name=f'enable-job-{instance.id}').delete()
+            self.handle_job_scheduling(serializer.instance)
+        return Response(self.get_serializer(serializer.instance).data)
 
 # --- WebSocket Test View ---
 class TestWebSocketView(TemplateView):

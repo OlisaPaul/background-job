@@ -44,7 +44,23 @@ class JobSerializer(serializers.ModelSerializer, ScheduleValidationMixin):
         fields = '__all__'
 
     def validate(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        return self.validate_schedule(data)
+        # For partial updates, use instance values for missing fields
+        instance = getattr(self, 'instance', None)
+        schedule_type = data.get('schedule_type')
+        scheduled_time = data.get('scheduled_time')
+        if instance:
+            if schedule_type is None:
+                schedule_type = getattr(instance, 'schedule_type', None)
+            if scheduled_time is None:
+                scheduled_time = getattr(instance, 'scheduled_time', None)
+        # Only validate if schedule_type is 'scheduled' or 'interval'
+        if schedule_type in ('scheduled', 'interval'):
+            if not scheduled_time:
+                raise serializers.ValidationError('scheduled_time is required for scheduled or interval jobs.')
+            from django.utils import timezone
+            if scheduled_time <= timezone.now():
+                raise serializers.ValidationError('scheduled_time must be in the future.')
+        return data
 
     def get_file_url(self, obj: Job) -> str:
         if obj.job_type == 'upload_file' and obj.result and isinstance(obj.result, dict):

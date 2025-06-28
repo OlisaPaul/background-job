@@ -227,3 +227,72 @@ class JobIntegrationTests(APITestCase):
         # Both tasks should be deleted
         self.assertFalse(PeriodicTask.objects.filter(name=f'job-{job_id}').exists())
         self.assertFalse(PeriodicTask.objects.filter(name=f'enable-job-{job_id}').exists())
+
+    def test_update_job_only_pending_and_scheduled_or_interval_integration(self):
+        """Integration: Only pending jobs with schedule_type 'interval' or 'scheduled' can be updated."""
+        url = reverse('job-list')
+        future_time = (timezone.now() + timezone.timedelta(hours=2)).isoformat()
+        # Create a pending scheduled job
+        data = {
+            'job_type': 'send_email',
+            'parameters': {
+                'subject': 'Integration',
+                'body': 'Hello',
+                'recipient': 'integration@example.com'
+            },
+            'schedule_type': 'scheduled',
+            'scheduled_time': future_time
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        job_id = response.data['id']
+        patch_url = reverse('job-detail', args=[job_id])
+        new_time = (timezone.now() + timezone.timedelta(hours=3)).isoformat()
+        patch_data = {'scheduled_time': new_time}
+        patch_response = self.client.patch(patch_url, patch_data, format='json')
+        self.assertEqual(patch_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(patch_response.data['scheduled_time'][:16], new_time[:16])
+
+        # Try to update a job with status 'completed'
+        job = Job.objects.get(id=job_id)
+        job.status = 'completed'
+        job.save()
+        patch_response2 = self.client.patch(patch_url, {'scheduled_time': new_time}, format='json')
+        self.assertEqual(patch_response2.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('Only pending jobs', str(patch_response2.data))
+
+        # Try to update a job with schedule_type 'immediate'
+        data2 = {
+            'job_type': 'send_email',
+            'parameters': {
+                'subject': 'Integration',
+                'body': 'Hello',
+                'recipient': 'integration2@example.com'
+            },
+            'schedule_type': 'immediate'
+        }
+        response2 = self.client.post(url, data2, format='json')
+        job_id2 = response2.data['id']
+        patch_url2 = reverse('job-detail', args=[job_id2])
+        patch_response3 = self.client.patch(patch_url2, {'scheduled_time': new_time}, format='json')
+        self.assertEqual(patch_response3.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('Only pending jobs', str(patch_response3.data))
+
+        # Try to update a job with schedule_type 'interval' (should succeed)
+        data3 = {
+            'job_type': 'send_email',
+            'parameters': {
+                'subject': 'Integration',
+                'body': 'Hello',
+                'recipient': 'integration3@example.com'
+            },
+            'schedule_type': 'interval',
+            'frequency': 'daily',
+            'scheduled_time': future_time
+        }
+        response3 = self.client.post(url, data3, format='json')
+        job_id3 = response3.data['id']
+        patch_url3 = reverse('job-detail', args=[job_id3])
+        patch_response4 = self.client.patch(patch_url3, {'frequency': 'weekly'}, format='json')
+        self.assertEqual(patch_response4.status_code, status.HTTP_200_OK)
+        self.assertEqual(patch_response4.data['frequency'], 'weekly')
