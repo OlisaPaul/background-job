@@ -263,6 +263,15 @@ function Dashboard() {
                               e.stopPropagation();
                               navigate(`/jobs/${job.id}/edit`);
                             }}
+                            disabled={
+                              !(
+                                (job.status === "pending" ||
+                                  job.schedule_type === "scheduled" ||
+                                  job.schedule_type === "interval") &&
+                                job.schedule_type !== "immediate" &&
+                                job.status !== "completed"
+                              )
+                            }
                           >
                             <FaEdit />
                           </button>

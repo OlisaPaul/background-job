@@ -5,6 +5,7 @@ import EmailJobForm from "./components/EmailJobForm";
 import FileUploadForm from "./components/FileUploadForm";
 import JobDetails from "./components/JobDetails";
 import BulkEmailJobForm from "./components/BulkEmailJobForm";
+import EditJobForm from "./components/EditJobForm";
 // Add react-icons
 import { FaHome, FaEnvelope, FaUpload, FaUsers } from "react-icons/fa";
 
@@ -89,6 +90,7 @@ function App() {
         <Route path="/send-email" element={<EmailJobForm />} />
         <Route path="/upload-file" element={<FileUploadForm />} />
         <Route path="/jobs/:id" element={<JobDetails />} />
+        <Route path="/jobs/:id/edit" element={<EditJobForm />} />
         <Route path="/bulk-send-email" element={<BulkEmailJobForm />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
